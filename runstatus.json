@@ -1,0 +1,12 @@
+{
+"icdFile":"737_8_ICD.xlsx",
+"inputFiles":["A7-BSH-ADR-QAR-recording-20230714-230411.raw",
+"A7-BSH-ADR-QAR-recording-20230715-131918.raw",
+"A7-BSH-ADR-QAR-recording-20230715-161545.raw",
+"A7-BSH-ADR-QAR-recording-20230715-200045.raw",
+"A7-BSH-ADR-QAR-recording-20230716-003137.raw"],
+"outputFiles":["230716_062007_1102_OTHH_OBBI_QTR_a7bsh.csv"],
+"wordLength":32,
+"wordcount":1024,
+"tailNumber":"a7bsh"
+}
