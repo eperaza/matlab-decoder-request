@@ -12,7 +12,7 @@ import QAR_Decode
 import matlab
 import os
 
-my_QAR_Decode = QAR_Decode_Parallel.initialize()
+my_QAR_Decode = QAR_Decode.initialize()
 
 absolute_path = os.path.dirname(__file__)
 relative_path = "../input"
