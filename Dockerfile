@@ -26,8 +26,6 @@ WORKDIR /app
 COPY . .
 SHELL ["cmd", "/S", "/C"]
 
-RUN python setup.py install
-
 ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
 
 RUN python get-pip.py && \
