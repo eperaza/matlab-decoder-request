@@ -21,7 +21,6 @@ RUN Invoke-WebRequest -UseBasicParsing https://www.python.org/ftp/python/3.8.9/p
 RUN $env:PATH = 'C:\Users\ContainerAdministrator\AppData\Local\Programs\Python\Python38;C:\Program Files\MATLAB\MATLAB Runtime\v99\runtime\win64;C:\Users\ContainerAdministrator\AppData\Local\Programs\Python\Python38\Scripts' ;\
     [Environment]::SetEnvironmentVariable('PATH', $env:PATH, [EnvironmentVariableTarget]::Machine)
 
-
 WORKDIR /app
 COPY . .
 SHELL ["cmd", "/S", "/C"]
@@ -31,6 +30,4 @@ ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
 RUN python get-pip.py && \
     pip install -r requirements.txt
 
-WORKDIR /app/scripts
-
-ENTRYPOINT [ "python", "./__qar_decode_parallel__.py" ]
+ENTRYPOINT [ "python", "./scripts/__qar_decode_parallel__.py" ]

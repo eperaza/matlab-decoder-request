@@ -340,17 +340,17 @@ def start():
 
     messages = read_from_queue()
     if len(messages):
-        print("Number of CPUs: ", multiprocessing.cpu_count())
+        print("Number of CPUs: ", multiprocessing.cpu_count(), flush=True)
         pool = Pool()
         pool.map(process_queue, messages)
         pool.close()
         pool.join()
-        print("pool finished")
+        print("pool finished", flush=True)
         # decoder.terminate_package()
 
 
 if __name__ == "__main__":
-    schedule.every(1).seconds.do(start)
+    schedule.every(1).minutes.do(start)
 
     while True:
         schedule.run_pending()
