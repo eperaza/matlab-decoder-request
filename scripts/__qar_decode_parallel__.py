@@ -20,7 +20,6 @@ import shutil
 import importlib
 import subprocess
 from pathlib import Path
-import json_stream
 import signal
 from multiprocessing import Pool
 import multiprocessing
@@ -189,9 +188,19 @@ def download_package():
         time.sleep(2)
         zip_ref.close()  # close file
         os.remove(scripts_dir_in + "/QAR_Decode.zip")  # delete zipped file
-        # install_package()
+        install_package(scripts_dir_in)
     except Exception as e:
         print("Error retrieving package: ", e, flush=True)
+
+def install_package(scripts_dir_in):
+        try:
+            os.chdir(scripts_dir_in + "/for_redistribution_files_only")
+            process = subprocess.Popen(["python", "setup.py", "install"])
+            process.wait()
+            print("Package installed")
+            os.chdir(root_dir)
+        except Exception as e:
+            print("Error installing package: ", e, flush=True)
 
 
 def unzip(qar_dir_in):
@@ -341,7 +350,7 @@ def start():
 
 
 if __name__ == "__main__":
-    schedule.every(1).minutes.do(start)
+    schedule.every(1).seconds.do(start)
 
     while True:
         schedule.run_pending()
