@@ -276,7 +276,7 @@ def process_queue(msg):
         shutil.rmtree(_out_dir_in)
     except Exception as e:
         print("Exception: ", e, flush=True)
-        rollback(qar_dir_in, out_dir_in)
+        rollback(_qar_dir_in, _out_dir_in)
 
 
 def download_blob_to_file(file, qar_dir_in, out_dir_in):
