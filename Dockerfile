@@ -33,4 +33,4 @@ RUN python get-pip.py && \
 
 WORKDIR /app/scripts
 
-ENTRYPOINT [ "python", "./QarDecode.py" ]
+ENTRYPOINT [ "python", "./__qar_decode_parallel__.py" ]
