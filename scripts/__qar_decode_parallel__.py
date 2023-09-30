@@ -119,8 +119,9 @@ def read_from_queue():
         count = queue_client.peek_messages(max_messages=5)
         print("Message count: ", len(count), flush=True)
         if len(list(count)) > 0:
+            get_runtime()
             messages = queue_client.receive_messages(
-                max_messages=32, visibility_timeout=1800
+                max_messages=5, visibility_timeout=1800
             )
 
             # Install runtime package
@@ -135,13 +136,7 @@ def read_from_queue():
             return list(messages)
 
         return []
-        """
-        # Terminate package
-        my_QAR_Decode.terminate()
-
-        # Get queue message count again
-        count = queue_client.peek_messages(max_messages=5)
-        """
+       
     except Exception as e:
         print("Error processing batch: ", e, flush=True)
         my_QAR_Decode.terminate()
@@ -336,12 +331,11 @@ def rollback(qar_dir_in, out_dir_in):
 def start():
     auth_blob_client()
     auth_queue_client()
-    get_runtime()
 
     messages = read_from_queue()
     if len(messages):
         print("Number of CPUs: ", multiprocessing.cpu_count(), flush=True)
-        pool = Pool()
+        pool = Pool(multiprocessing.cpu_count()-1)
         pool.map(process_queue, messages)
         pool.close()
         pool.join()
@@ -350,7 +344,7 @@ def start():
 
 
 if __name__ == "__main__":
-    schedule.every(1).minutes.do(start)
+    schedule.every(5).minutes.do(start)
 
     while True:
         schedule.run_pending()
