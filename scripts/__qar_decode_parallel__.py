@@ -313,7 +313,7 @@ def upload_blob_file(client, container_name, out_dir_in):
                 tail = tail_token[0]
                 raw_type = "qar"
                 path = (
-                    raw_type + "/" + airline + "/" + tail + "/" + date + "/" + item.name
+                    airline + "/" + tail + "/" + date + "/" + item.name
                 )
                 with open(file=(item), mode="rb") as data:
                     container_client.upload_blob(name=path, data=data, overwrite=True)
