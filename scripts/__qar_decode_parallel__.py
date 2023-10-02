@@ -43,15 +43,15 @@ import time
 
 load_dotenv()
 STORAGE_CONNECTION_STRING = os.getenv("STORAGE_CONNECTION_STRING")
-AIRLINE_FLIGHT_DATA_PENDING_CONTAINER = os.getenv(
-    "AIRLINE_FLIGHT_DATA_PENDING_CONTAINER"
+AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv(
+    "AIRLINE_FLIGHT_DATA_CONTAINER"
 )
-ANALYTICS_PENDING_CONTAINER = os.getenv("ANALYTICS_PENDING_CONTAINER")
+ANALYTICS_CONTAINER = os.getenv("ANALYTICS_CONTAINER")
 icds = None
 package = None
 
-AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv("AIRLINE_FLIGHT_DATA_CONTAINER")
-AIRLINE_FLIGHT_DATA_QUEUE = os.getenv("AIRLINE_FLIGHT_DATA_PENDING_QUEUE")
+FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
+QAR_DECODE_QUEUE = os.getenv("QAR_DECODE_QUEUE")
 blob_client = None
 queue_client = None
 absolute_path = Path.cwd()
@@ -87,7 +87,7 @@ def auth_queue_client():
     global queue_client
     queue_client = QueueClient.from_connection_string(
         STORAGE_CONNECTION_STRING,
-        AIRLINE_FLIGHT_DATA_QUEUE,
+        QAR_DECODE_QUEUE,
         message_decode_policy=TextBase64DecodePolicy(),
     )
 
@@ -95,7 +95,7 @@ def auth_queue_client():
 def get_runtime():
     try:
         client = blob_client.get_blob_client(
-            container=ANALYTICS_PENDING_CONTAINER, blob="config/runtime.json"
+            container=ANALYTICS_CONTAINER, blob="config/runtime.json"
         )
 
         downloader = client.download_blob(max_concurrency=1, encoding="UTF-8")
@@ -148,7 +148,7 @@ def download_icds():
             STORAGE_CONNECTION_STRING
         )
         client = blob_client.get_blob_client(
-            container=ANALYTICS_PENDING_CONTAINER, blob=icds
+            container=ANALYTICS_CONTAINER, blob=icds
         )
         with open(file=(root_dir + "/ICDs.zip"), mode="wb") as sample_blob:
             download_stream = client.download_blob()
@@ -169,7 +169,7 @@ def download_package():
             STORAGE_CONNECTION_STRING
         )
         client = blob_client.get_blob_client(
-            container=ANALYTICS_PENDING_CONTAINER, blob=package
+            container=ANALYTICS_CONTAINER, blob=package
         )
 
         with open(file=(scripts_dir_in + "/QAR_Decode.zip"), mode="wb") as sample_blob:
@@ -260,7 +260,7 @@ def process_queue(msg):
 
         queue_client = QueueClient.from_connection_string(
             STORAGE_CONNECTION_STRING,
-            AIRLINE_FLIGHT_DATA_QUEUE,
+            QAR_DECODE_QUEUE,
             message_decode_policy=TextBase64DecodePolicy(),
         )
 
@@ -278,7 +278,7 @@ def download_blob_to_file(file, qar_dir_in, out_dir_in):
     # print("Downloading: ", file, flush=True)
     blob_client = BlobServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
     client = blob_client.get_blob_client(
-        container=AIRLINE_FLIGHT_DATA_PENDING_CONTAINER, blob=file
+        container=AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
     )
     tokens = file.split("/")
     airline = tokens[1]
@@ -292,7 +292,7 @@ def download_blob_to_file(file, qar_dir_in, out_dir_in):
 
     unzip(qar_dir_in)
     decode(airline, tail, qar_dir_in, out_dir_in)
-    upload_blob_file(blob_client, AIRLINE_FLIGHT_DATA_CONTAINER, out_dir_in)
+    upload_blob_file(blob_client, FLIGHT_RECORDS_CONTAINER, out_dir_in)
 
 
 def upload_blob_file(client, container_name, out_dir_in):
