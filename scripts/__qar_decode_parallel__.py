@@ -311,7 +311,6 @@ def upload_blob_file(client, container_name, out_dir_in):
                 airline = tokens[5]
                 tail_token = tokens[6].split(".")
                 tail = tail_token[0]
-                raw_type = "qar"
                 path = (
                     airline + "/" + tail + "/" + date + "/" + item.name
                 )
@@ -335,7 +334,7 @@ def start():
     messages = read_from_queue()
     if len(messages):
         print("Number of CPUs: ", multiprocessing.cpu_count(), flush=True)
-        pool = Pool(multiprocessing.cpu_count()-1)
+        pool = Pool()
         pool.map(process_queue, messages)
         pool.close()
         pool.join()
