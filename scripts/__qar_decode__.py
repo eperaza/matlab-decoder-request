@@ -322,7 +322,7 @@ class Decoder:
 
 if __name__ == "__main__":
     decoder = Decoder()
-    schedule.every(1).seconds.do(decoder.read_from_queue)
+    schedule.every(1).minutes.do(decoder.read_from_queue)
 
     while True:
         schedule.run_pending()
