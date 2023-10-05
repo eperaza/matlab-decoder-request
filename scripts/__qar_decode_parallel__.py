@@ -345,7 +345,7 @@ def start():
 
 
 if __name__ == "__main__":
-    schedule.every(1).seconds.do(start)
+    schedule.every(1).minutes.do(start)
 
     while True:
         schedule.run_pending()
