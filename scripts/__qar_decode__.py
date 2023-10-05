@@ -20,8 +20,6 @@ import shutil
 import importlib
 import subprocess
 from pathlib import Path
-import json_stream
-import signal
 
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import (
