@@ -43,16 +43,16 @@ class Decoder:
     def __init__(self):
         load_dotenv()
         self.STORAGE_CONNECTION_STRING = os.getenv("STORAGE_CONNECTION_STRING")
-        self.AIRLINE_FLIGHT_DATA_PENDING_CONTAINER = os.getenv(
-            "AIRLINE_FLIGHT_DATA_PENDING_CONTAINER"
+        self.AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv(
+            "AIRLINE_FLIGHT_DATA_CONTAINER"
         )
-        self.ANALYTICS_PENDING_CONTAINER = os.getenv("ANALYTICS_PENDING_CONTAINER")
+        self.ANALYTICS_CONTAINER = os.getenv("ANALYTICS_CONTAINER")
         self.icds = None
         self.package = None
         self.QAR_Decode = None
         self.my_QAR_Decode = None
-        self.AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv("AIRLINE_FLIGHT_DATA_CONTAINER")
-        self.AIRLINE_FLIGHT_DATA_QUEUE = os.getenv("AIRLINE_FLIGHT_DATA_PENDING_QUEUE")
+        self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
+        self.QAR_DECODE_QUEUE = os.getenv("QAR_DECODE_QUEUE")
         self.blob_client = self.auth_blob_client()
         self.queue_client = self.auth_queue_client()
         self.get_runtime()
@@ -85,7 +85,7 @@ class Decoder:
         # Setup Base64 encoding and decoding functions
         client = QueueClient.from_connection_string(
             self.STORAGE_CONNECTION_STRING,
-            self.AIRLINE_FLIGHT_DATA_QUEUE,
+            self.QAR_DECODE_QUEUE,
             message_decode_policy=TextBase64DecodePolicy(),
         )
         return client
@@ -93,7 +93,7 @@ class Decoder:
     def get_runtime(self):
         try:
             blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_PENDING_CONTAINER, blob="config/runtime.json"
+                container=self.ANALYTICS_CONTAINER, blob="config/runtime.json"
             )
 
             downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
@@ -109,7 +109,7 @@ class Decoder:
     def download_icds(self):
         try:
             blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_PENDING_CONTAINER, blob=self.icds
+                container=self.ANALYTICS_CONTAINER, blob=self.icds
             )
             with open(file=(self.QARDirIn + "/ICDs.zip"), mode="wb") as sample_blob:
                 download_stream = blob_client.download_blob()
@@ -129,7 +129,7 @@ class Decoder:
     def download_package(self):
         try:
             blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_PENDING_CONTAINER, blob=self.package
+                container=self.ANALYTICS_CONTAINER, blob=self.package
             )
 
             with open(
@@ -169,7 +169,7 @@ class Decoder:
         try:
             # print("Downloading: ", file, flush=True)
             blob_client = self.blob_client.get_blob_client(
-                container=self.AIRLINE_FLIGHT_DATA_PENDING_CONTAINER, blob=file
+                container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
             )
 
             tokens = file.split("/")
@@ -184,7 +184,7 @@ class Decoder:
 
             self.unzip(self.QARDirIn)
             self.decode(airline, tail)
-            self.upload_blob_file(self.blob_client, self.AIRLINE_FLIGHT_DATA_CONTAINER)
+            self.upload_blob_file(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
 
         except Exception as e:
             print("Exception: ", e, flush=True)
@@ -250,7 +250,7 @@ class Decoder:
                 # Install runtime package
                 self.download_package()
                 self.QAR_Decode = importlib.import_module("QAR_Decode")
-                self.QAR_Decode.initialize_runtime(["-nojvm"])
+                #self.QAR_Decode.initialize_runtime(["-nojvm"])
                 self.my_QAR_Decode = self.QAR_Decode.initialize()
                 # Read message queue
                 for msg in messages:
@@ -322,7 +322,7 @@ class Decoder:
 
 if __name__ == "__main__":
     decoder = Decoder()
-    schedule.every(1).minutes.do(decoder.read_from_queue)
+    schedule.every(1).seconds.do(decoder.read_from_queue)
 
     while True:
         schedule.run_pending()

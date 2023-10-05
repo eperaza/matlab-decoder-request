@@ -126,8 +126,10 @@ def read_from_queue():
 
             # Install runtime package
             download_package()
+            global QAR_Decode
             QAR_Decode = importlib.import_module("QAR_Decode")
             QAR_Decode.initialize_runtime(["-nojvm"])
+            global my_QAR_Decode
             my_QAR_Decode = QAR_Decode.initialize()
 
             # Install ICDs
@@ -218,9 +220,9 @@ def unzip(qar_dir_in):
 
 
 def decode(airline, tail, qar_dir_in, out_dir_in):
-    QAR_Decode = importlib.import_module("QAR_Decode")
-    QAR_Decode.initialize_runtime(["-nojvm"])
-    my_QAR_Decode = QAR_Decode.initialize()
+    #QAR_Decode = importlib.import_module("QAR_Decode")
+    #QAR_Decode.initialize_runtime(["-nojvm"])
+    #my_QAR_Decode = QAR_Decode.initialize()
     # Decode binary
     my_QAR_Decode.QAR_Decode(qar_dir_in, out_dir_in, airline, tail, nargout=0)
 
@@ -228,7 +230,7 @@ def decode(airline, tail, qar_dir_in, out_dir_in):
         if not item.name.startswith("ICDs"):
             # Prints only text file present in My Folder
             os.remove(item)
-    my_QAR_Decode.terminate()
+    #my_QAR_Decode.terminate()
 
 
 def process_queue(msg):
