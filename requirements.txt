@@ -2,3 +2,5 @@ azure.storage.blob
 azure.storage.queue
 python-dotenv
 schedule
+azure.servicebus
+aiohttp
