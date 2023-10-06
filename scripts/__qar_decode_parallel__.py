@@ -126,11 +126,7 @@ def read_from_queue():
 
             # Install runtime package
             download_package()
-            global QAR_Decode
-            QAR_Decode = importlib.import_module("QAR_Decode")
-            QAR_Decode.initialize_runtime(["-nojvm"])
-            global my_QAR_Decode
-            my_QAR_Decode = QAR_Decode.initialize()
+            
 
             # Install ICDs
             download_icds()

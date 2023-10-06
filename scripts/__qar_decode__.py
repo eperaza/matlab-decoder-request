@@ -239,9 +239,10 @@ class Decoder:
             count = self.queue_client.peek_messages(max_messages=5)
             print("Message count: ", len(count), flush=True)
             while len(count) > 0:
+                self.restart_program()
                 print(len(count))
                 messages = self.queue_client.receive_messages(
-                    max_messages=32, visibility_timeout=1800
+                    max_messages=5, visibility_timeout=1800
                 )
                 # Install ICDs
                 self.download_icds()
@@ -249,7 +250,11 @@ class Decoder:
                 self.download_package()
                 self.QAR_Decode = importlib.import_module("QAR_Decode")
                 #self.QAR_Decode.initialize_runtime(["-nojvm"])
-                self.my_QAR_Decode = self.QAR_Decode.initialize()
+                '''
+                '''
+                if (self.my_QAR_Decode == None):
+                    self.my_QAR_Decode = self.QAR_Decode.initialize()
+
                 # Read message queue
                 for msg in messages:
                     # Read each message
@@ -262,14 +267,14 @@ class Decoder:
                     self.queue_client.delete_message(msg)
                     # print("Messages processed in this run: ", len(count), flush=True)
                 # Delete package
-                self.my_QAR_Decode.terminate()
+                #self.my_QAR_Decode.terminate()
                 
                 #shutil.rmtree(self.ScriptsDirIn + "/for_redistribution_files_only")
                 # Get queue message count again
                 count = self.queue_client.peek_messages(max_messages=5)
         except Exception as e:
             print("Error processing batch: ", e, flush=True)
-            self.my_QAR_Decode.terminate()
+            #self.my_QAR_Decode.terminate()
             self.rollback()
 
         # terminate package
@@ -317,10 +322,17 @@ class Decoder:
             print("Package installed")
         except Exception as e:
             print("Error installing package: ", e, flush=True)
+    
+    def restart_program(self):
+        """Restarts the current program.
+        Note: this function does not return. Any cleanup action (like
+        saving data) must be done before calling this function."""
+        python = sys.executable
+        os.execl(python, python, * sys.argv)
 
 if __name__ == "__main__":
     decoder = Decoder()
-    schedule.every(1).minutes.do(decoder.read_from_queue)
+    schedule.every(1).seconds.do(decoder.read_from_queue)
 
     while True:
         schedule.run_pending()
