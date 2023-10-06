@@ -28,6 +28,8 @@ from azure.storage.queue import (
     QueueMessage,
     TextBase64DecodePolicy,
 )
+from azure.servicebus import ServiceBusClient
+from azure.servicebus.management import ServiceBusAdministrationClient
 
 import io
 from dotenv import load_dotenv
@@ -41,9 +43,7 @@ class Decoder:
     def __init__(self):
         load_dotenv()
         self.STORAGE_CONNECTION_STRING = os.getenv("STORAGE_CONNECTION_STRING")
-        self.AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv(
-            "AIRLINE_FLIGHT_DATA_CONTAINER"
-        )
+        self.AIRLINE_FLIGHT_DATA_CONTAINER = os.getenv("AIRLINE_FLIGHT_DATA_CONTAINER")
         self.ANALYTICS_CONTAINER = os.getenv("ANALYTICS_CONTAINER")
         self.icds = None
         self.package = None
@@ -55,6 +55,11 @@ class Decoder:
         self.queue_client = self.auth_queue_client()
         self.get_runtime()
 
+        self.QUEUE_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=jwyDkYcjjmBRn9WuVi0P+AcToxDTynjL4+ASbJjVHIM=;EntityPath=sbq-qar-decode"
+        self.TOPIC_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=qzbzXVit/Ts/y/DBA95nVKFS8DW32oD+p+ASbLkgXEU=;EntityPath=sbt-qar-decode"
+        self.QAR_DECODE_QUEUE = "sbq-qar-decode"
+        self.QAR_DECODE_TOPIC = "sbt-qar-decode"
+        self.TOPIC_SUBSCRIPTION = "sbts-runtime-override"
         absolute_path = Path.cwd()
 
         relative_path = "input"
@@ -100,6 +105,7 @@ class Decoder:
             self.icds = runtime["icds"]
             self.package = runtime["package"]
             print("Runtime: ", runtime)
+            return runtime
         except Exception as e:
             print("Error retrieving runtime config: ", e, flush=True)
             self.rollback()
@@ -149,157 +155,192 @@ class Decoder:
             self.rollback()
 
     def decode(self, airline, tail):
-        try:
-            # Decode binary
-            self.my_QAR_Decode.QAR_Decode(
-                self.QARDirIn, self.OutDirIn, airline, tail, nargout=0
-            )
+        # Decode binary
+        self.my_QAR_Decode.QAR_Decode(
+            self.QARDirIn, self.OutDirIn, airline, tail, nargout=0
+        )
 
-            for item in os.scandir(self.QARDirIn):
-                if not item.name.startswith("ICDs"):
-                    # Prints only text file present in My Folder
-                    os.remove(item)
-        except Exception as e:
-            print("Decoding failed: ", e, flush=True)
-            self.rollback()
+        for item in os.scandir(self.QARDirIn):
+            if not item.name.startswith("ICDs"):
+                # Prints only text file present in My Folder
+                os.remove(item)
 
     def download_blob_to_file(self, file):
-        try:
-            # print("Downloading: ", file, flush=True)
-            blob_client = self.blob_client.get_blob_client(
-                container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
-            )
+        file = file.replace(
+            "/blobServices/default/containers/"
+            + self.AIRLINE_FLIGHT_DATA_CONTAINER
+            + "/blobs/",
+            "",
+        )
+        # print("Downloading: ", file, flush=True)
+        blob_client = self.blob_client.get_blob_client(
+            container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
+        )
 
-            tokens = file.split("/")
-            airline = tokens[1]
-            tail = tokens[2]
-            file_name = tokens.pop()
+        tokens = file.split("/")
+        airline = tokens[1]
+        tail = tokens[2]
+        file_name = tokens.pop()
 
-            with open(file=(self.QARDirIn + "/" + file_name), mode="wb") as sample_blob:
-                download_stream = blob_client.download_blob()
-                sample_blob.write(download_stream.readall())
-            print("File downloaded successfully", flush=True)
+        with open(file=(self.QARDirIn + "/" + file_name), mode="wb") as sample_blob:
+            download_stream = blob_client.download_blob()
+            sample_blob.write(download_stream.readall())
+        print("File downloaded successfully", flush=True)
 
-            self.unzip(self.QARDirIn)
-            self.decode(airline, tail)
-            self.upload_blob_file(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
-
-        except Exception as e:
-            print("Exception: ", e, flush=True)
-            self.rollback()
+        self.unzip(self.QARDirIn)
+        self.decode(airline, tail)
+        self.upload_blob_file(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
 
     def upload_blob_file(self, client, container_name):
-        try:
-            container_client = client.get_container_client(container=container_name)
-            extension = ".csv"
-            for item in os.scandir(self.OutDirIn):  # loop through items in
-                print("Scanning output dir...", flush=True)
-                if item.name.endswith(extension):  # check for ".csv" extension
-                    if item.name.startswith("------") or item.name.startswith("raw"):
-                        print("Ignore file:", item.name, flush=True)
-                    else:
-                        print("Flight record: ", item.name, flush=True)
-                        tokens = item.name.split("_")
-                        date = tokens[0]
-                        date = "20" + date[0:4]
-                        airline = tokens[5]
-                        tail_token = tokens[6].split(".")
-                        tail = tail_token[0]
-                        raw_type = "qar"
-                        path = (
-                            raw_type
-                            + "/"
-                            + airline
-                            + "/"
-                            + date
-                            + "/"
-                            + tail
-                            + "/"
-                            + item.name
+        container_client = client.get_container_client(container=container_name)
+        extension = ".csv"
+        for item in os.scandir(self.OutDirIn):  # loop through items in
+            print("Scanning output dir...", flush=True)
+            if item.name.endswith(extension):  # check for ".csv" extension
+                if item.name.startswith("------") or item.name.startswith("raw"):
+                    print("Ignore file:", item.name, flush=True)
+                else:
+                    print("Flight record: ", item.name, flush=True)
+                    tokens = item.name.split("_")
+                    date = tokens[0]
+                    date = "20" + date[0:4]
+                    airline = tokens[5]
+                    tail_token = tokens[6].split(".")
+                    tail = tail_token[0]
+                    raw_type = "qar"
+                    path = (
+                        raw_type
+                        + "/"
+                        + airline
+                        + "/"
+                        + date
+                        + "/"
+                        + tail
+                        + "/"
+                        + item.name
+                    )
+                    with open(file=(item), mode="rb") as data:
+                        container_client.upload_blob(
+                            name=path, data=data, overwrite=True
                         )
-                        with open(file=(item), mode="rb") as data:
-                            container_client.upload_blob(
-                                name=path, data=data, overwrite=True
-                            )
-                            print("File uploaded successfully", flush=True)
-            for item in os.scandir(self.OutDirIn):
-                try:
-                    shutil.rmtree(item)
-                except OSError:
-                    os.remove(item)
-        except Exception as e:
-            print("Error uploading file: ", e, flush=True)
-            self.rollback()
+                        print("File uploaded successfully", flush=True)
+        for item in os.scandir(self.OutDirIn):
+            try:
+                shutil.rmtree(item)
+            except OSError:
+                os.remove(item)
 
-    def read_from_queue(self):
+    def read_from_service_bus(self):
         print("Listening...", flush=True)
         try:
-            properties = self.queue_client.get_queue_properties()
-            # count = properties.approximate_message_count
-            count = self.queue_client.peek_messages(max_messages=5)
-            print("Message count: ", len(count), flush=True)
-            while len(count) > 0:
-                self.restart_program()
-                print(len(count))
-                messages = self.queue_client.receive_messages(
-                    max_messages=5, visibility_timeout=1800
-                )
+            # Read from service bus runtime-override topic to check if runtime must be overriden for app restart
+            self.read_sb_topic()
+
+            with ServiceBusAdministrationClient.from_connection_string(
+                self.QUEUE_NAMESPACE_CONN
+            ) as client:
+                count = client.get_queue_runtime_properties(
+                    self.QAR_DECODE_QUEUE
+                ).active_message_count
+
+            print("Message count: ", count, flush=True)
+            while count > 0:
+                # self.restart_program()
+
                 # Install ICDs
                 self.download_icds()
                 # Install runtime package
                 self.download_package()
                 self.QAR_Decode = importlib.import_module("QAR_Decode")
-                #self.QAR_Decode.initialize_runtime(["-nojvm"])
-                '''
-                '''
-                if (self.my_QAR_Decode == None):
+                # self.QAR_Decode.initialize_runtime(["-nojvm"])
+
+                if self.my_QAR_Decode == None:
                     self.my_QAR_Decode = self.QAR_Decode.initialize()
 
-                # Read message queue
-                for msg in messages:
-                    # Read each message
-                    data = json.loads(msg.content)
-                    file = data["file_path"]
-                    print("", flush=True)
-                    print("Message read from queue: ", file, flush=True)
-                    # Download qar file from path in message
-                    self.download_blob_to_file(file)
-                    self.queue_client.delete_message(msg)
-                    # print("Messages processed in this run: ", len(count), flush=True)
-                # Delete package
-                #self.my_QAR_Decode.terminate()
-                
-                #shutil.rmtree(self.ScriptsDirIn + "/for_redistribution_files_only")
-                # Get queue message count again
-                count = self.queue_client.peek_messages(max_messages=5)
+                # Read from service bus qar-decode queue
+                count = self.read_sb_queue()
+
         except Exception as e:
-            print("Error processing batch: ", e, flush=True)
+            print("Error reading from service bus: ", e, flush=True)
+            # self.my_QAR_Decode.terminate()
+            self.rollback()
+
+    def read_sb_topic(self):
+        try:
+            with ServiceBusClient.from_connection_string(
+                self.TOPIC_NAMESPACE_CONN
+            ) as client:
+                # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
+                # Default is None; to receive forever.
+                with client.get_subscription_receiver(
+                    topic_name=self.QAR_DECODE_TOPIC,
+                    subscription_name=self.TOPIC_SUBSCRIPTION,
+                    max_wait_time=5,
+                ) as receiver:
+                    for msg in receiver:  # ServiceBusReceiver instance is a generator.
+                        print(str(msg))
+                        # Read each message
+                        data = json.loads(str(msg))
+                        pkg = data["package"]
+                        print("Message read from topic: ", pkg, flush=True)
+                        print("Overriding package...", flush=True)
+                        runtime = self.get_runtime()
+                        print("Current package...", runtime["package"], flush=True)
+                        runtime["package"] = pkg
+                        print("New package...", runtime["package"], flush=True)
+        except Exception as e:
+            print("Error reading from sb topic: ", e, flush=True)
+            # self.my_QAR_Decode.terminate()
+            self.rollback()
+
+            # receiver.complete_message(msg)
+
+    def read_sb_queue(self):
+        try:
+            with ServiceBusClient.from_connection_string(
+                self.QUEUE_NAMESPACE_CONN
+            ) as client:
+                # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
+                # Default is None; to receive forever.
+                with client.get_queue_receiver(
+                    self.QAR_DECODE_QUEUE, max_wait_time=30
+                ) as receiver:
+                    for msg in receiver:  # ServiceBusReceiver instance is a generator.
+                        # Read each message
+                        data = json.loads(str(msg))
+                        file = data["subject"]
+                        print("Message read from queue: ", file, flush=True)
+                        # Download qar file from path in message
+                        #self.download_blob_to_file(file)
+                        #receiver.complete_message(msg)
+                        # If it is desired to halt receiving early, one can break out of the loop here safely.
+                        with ServiceBusAdministrationClient.from_connection_string(
+                            self.QUEUE_NAMESPACE_CONN
+                        ) as client:
+                            count = client.get_queue_runtime_properties(
+                                self.QAR_DECODE_QUEUE
+                            ).active_message_count
+                            print("Messages left in queue: ", count, flush=True)
+            return count
+        except Exception as e:
+            print("Error reading from sb queue: ", e, flush=True)
             #self.my_QAR_Decode.terminate()
             self.rollback()
 
-        # terminate package
-        # self.my_QAR_Decode.terminate()
-
-        # Upload blob to storage
-
     def unzip(self, qar_dir_in):
-        try:
-            extension = ".zip"
-            # os.chdir(qar_dir_in)
+        extension = ".zip"
+        # os.chdir(qar_dir_in)
 
-            for item in os.scandir(qar_dir_in):  # loop through items in dir
-                if item.name.endswith(extension):  # check for ".zip" extension
-                    # file_name = os.path.abspath(item)  # get full path of files
-                    zip_ref = zipfile.ZipFile(item)  # create zipfile object
-                    # print(zip_ref.filename)
-                    zip_ref.extractall(qar_dir_in)  # extract file to dir
-                    zip_ref.close()  # close file
-                    os.remove(item)  # delete zipped file
-                    raw = qar_dir_in + "/raw_" + str(uuid.uuid4()) + ".dat"
-                    os.rename(qar_dir_in + "/raw.dat", raw)
-        except Exception as e:
-            print("Error deleting unzipped file: ", e, flush=True)
-            self.rollback()
+        for item in os.scandir(qar_dir_in):  # loop through items in dir
+            if item.name.endswith(extension):  # check for ".zip" extension
+                # file_name = os.path.abspath(item)  # get full path of files
+                zip_ref = zipfile.ZipFile(item)  # create zipfile object
+                # print(zip_ref.filename)
+                zip_ref.extractall(qar_dir_in)  # extract file to dir
+                zip_ref.close()  # close file
+                os.remove(item)  # delete zipped file
+                raw = qar_dir_in + "/raw_" + str(uuid.uuid4()) + ".dat"
+                os.rename(qar_dir_in + "/raw.dat", raw)
 
     def rollback(self):
         try:
@@ -322,18 +363,19 @@ class Decoder:
             print("Package installed")
         except Exception as e:
             print("Error installing package: ", e, flush=True)
-    
+
     def restart_program(self):
         """Restarts the current program.
         Note: this function does not return. Any cleanup action (like
         saving data) must be done before calling this function."""
         print("Terminating... ", flush=True)
         python = sys.executable
-        os.execl(python, python, * sys.argv)
+        os.execl(python, python, *sys.argv)
+
 
 if __name__ == "__main__":
     decoder = Decoder()
-    schedule.every(1).seconds.do(decoder.read_from_queue)
+    schedule.every(1).seconds.do(decoder.read_from_service_bus)
 
     while True:
         schedule.run_pending()

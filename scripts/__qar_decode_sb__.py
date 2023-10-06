@@ -5,7 +5,7 @@ import os
 NAMESPACE_CONNECTION_STR = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=hm3JelNwhfXPRk6e/iWnBi4ERE6KDTuDC+ASbFskXsA=;EntityPath=qar-decode"
 QUEUE_NAME = "qar-decode"
 
-def run():
+def read_service_bus():
     with ServiceBusClient.from_connection_string(NAMESPACE_CONNECTION_STR) as client:
     # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
     # Default is None; to receive forever.

@@ -1,0 +1,12 @@
+{
+"icdFile":"777_QTR_ICD.xlsx",
+"inputFiles":[["raw_4dee5b83-de6a-4584-bfa2-dbf89c3c2199.dat",
+"raw_4dee5b83-de6a-4584-bfa2-dbf89c3c2199.dat",
+"raw_4dee5b83-de6a-4584-bfa2-dbf89c3c2199.dat"]],
+"outputFiles":["------_----_OTHH_OERK_QTR_a7baa.csv",
+"230705_162900_----_ZSHC_OTHH_QTR_a7baa.csv",
+"230706_054355_----_OTHH_OERK_QTR_a7baa.csv"],
+"wordLength":16,
+"wordcount":512,
+"tailNumber":"a7baa"
+}
