@@ -308,10 +308,13 @@ class Decoder:
                     for msg in receiver:  # ServiceBusReceiver instance is a generator.
                         # Read each message
                         data = json.loads(str(msg))
-                        file = data["subject"]
-                        print("Message read from queue: ", file, flush=True)
+                        subject = data["subject"]
+                        msg_id = data["id"]
+                        print("Message id: ", msg_id, flush=True)
+                        print("Message subject: ", subject, flush=True)
+
                         # Download qar file from path in message
-                        #self.download_blob_to_file(file)
+                        #self.download_blob_to_file(subject)
                         #receiver.complete_message(msg)
                         # If it is desired to halt receiving early, one can break out of the loop here safely.
                         with ServiceBusAdministrationClient.from_connection_string(
