@@ -4,3 +4,4 @@ python-dotenv
 schedule
 azure.servicebus
 aiohttp
+python-dateutil

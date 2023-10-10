@@ -8,8 +8,6 @@ Refer to the MATLAB Compiler SDK documentation for more information.
 
 from __future__ import print_function
 
-# import QAR_Decode_Parallel
-# import QAR_Decode
 import sys
 import os
 import asyncio
@@ -21,14 +19,14 @@ import importlib
 import subprocess
 from pathlib import Path
 
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContainerClient
 from azure.storage.queue import (
     QueueServiceClient,
     QueueClient,
     QueueMessage,
     TextBase64DecodePolicy,
 )
-from azure.servicebus import ServiceBusClient
+from azure.servicebus import ServiceBusClient, AutoLockRenewer
 from azure.servicebus.management import ServiceBusAdministrationClient
 
 import io
@@ -37,6 +35,9 @@ import os
 import json
 import schedule
 import time
+import datetime
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 
 
 class Decoder:
@@ -50,18 +51,18 @@ class Decoder:
         self.QAR_Decode = None
         self.my_QAR_Decode = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
-        self.QAR_DECODE_QUEUE = os.getenv("QAR_DECODE_QUEUE")
         self.blob_client = self.auth_blob_client()
-        self.queue_client = self.auth_queue_client()
+        self.MACHINE_CPUS = 4
         self.get_runtime()
 
-        self.QUEUE_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=jwyDkYcjjmBRn9WuVi0P+AcToxDTynjL4+ASbJjVHIM=;EntityPath=sbq-qar-decode"
-        self.TOPIC_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=qzbzXVit/Ts/y/DBA95nVKFS8DW32oD+p+ASbLkgXEU=;EntityPath=sbt-qar-decode"
-        self.QAR_DECODE_QUEUE = "sbq-qar-decode"
-        self.QAR_DECODE_TOPIC = "sbt-qar-decode"
-        self.TOPIC_SUBSCRIPTION = "sbts-runtime-override"
-        absolute_path = Path.cwd()
+        self.QUEUE_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=nOsOeBh7Y33u8EZe1DKUM018jaCWHipw6+ASbNrj5Rc=;EntityPath=sbq-qar-decode-request"
+        self.QAR_DECODE_QUEUE = "sbq-qar-decode-request"
 
+        self.TOPIC_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=X8ljCk1awlgQ7OcxpBW/YiGQxIWls8ieF+ASbJraWGU=;EntityPath=sbt-qar-decode-request"
+        self.QAR_DECODE_REQUEST_TOPIC = "sbt-qar-decode-request"
+        self.QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION = "sbts-qar-decode-request"
+
+        absolute_path = Path.cwd()
         relative_path = "input"
         QARDirIn = absolute_path / relative_path
         self.QARDirIn = str(Path(QARDirIn))
@@ -130,10 +131,10 @@ class Decoder:
             print("Error retrieving ICDs: ", e, flush=True)
             self.rollback()
 
-    def download_package(self):
+    def download_package(self, package):
         try:
             blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_CONTAINER, blob=self.package
+                container=self.ANALYTICS_CONTAINER, blob=package
             )
 
             with open(
@@ -154,12 +155,73 @@ class Decoder:
             print("Error retrieving package: ", e, flush=True)
             self.rollback()
 
+    def process_batch(self, sample, count):
+        _airline = sample["airline"]
+        _tail = sample["tail"]
+        _file_path = sample["file_path"]
+        _package = sample["package"]
+        # Download sample
+        self.download_blob_to_file(_file_path)
+
+        while count > 0:
+            batch = []
+            with ServiceBusClient.from_connection_string(
+                self.QUEUE_NAMESPACE_CONN
+            ) as client:
+                # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
+                # Default is None; to receive forever.
+                # Get message sample
+                with client.get_queue_receiver(self.QAR_DECODE_QUEUE) as receiver:
+                    received_msgs = receiver.receive_messages(
+                        max_message_count=self.MACHINE_CPUS, max_wait_time=5
+                    )
+                    for (
+                        msg
+                    ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                        try:
+                            with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+                                auto_lock_renewer.register(
+                                    receiver, msg, max_lock_renewal_duration=3600
+                                )
+                                print("Lock lease extended", flush=True)
+                            # Read each message
+                            data = json.loads(str(msg))
+                            airline = data["airline"]
+                            tail = data["tail"]
+                            file_path = data["file_path"]
+                            package = data["package"]
+                            if (
+                                airline == _airline
+                                and tail == _tail
+                                and package == _package
+                            ):
+                                batch.append(file_path)
+                            receiver.complete_message(msg)
+                        except Exception as e:
+                            print("Error crawling batch: ", e, flush=True)
+                    for file in batch:
+                        self.download_blob_to_file(file)
+            if len(batch) > 0:
+                self.unzip(self.QARDirIn)
+                self.decode(airline, tail)
+                self.upload_blob_files(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
+
+            with ServiceBusAdministrationClient.from_connection_string(
+                self.QUEUE_NAMESPACE_CONN
+            ) as client:
+                count = client.get_queue_runtime_properties(
+                    self.QAR_DECODE_QUEUE
+                ).active_message_count
+
+                # self.process_batch(airline, tail)
+        self.restart_program()
+        
     def decode(self, airline, tail):
         # Decode binary
         self.my_QAR_Decode.QAR_Decode(
             self.QARDirIn, self.OutDirIn, airline, tail, nargout=0
         )
-
+        # Clean input files
         for item in os.scandir(self.QARDirIn):
             if not item.name.startswith("ICDs"):
                 # Prints only text file present in My Folder
@@ -172,7 +234,7 @@ class Decoder:
             + "/blobs/",
             "",
         )
-        # print("Downloading: ", file, flush=True)
+        print("Downloading: ", file, flush=True)
         blob_client = self.blob_client.get_blob_client(
             container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
         )
@@ -187,11 +249,11 @@ class Decoder:
             sample_blob.write(download_stream.readall())
         print("File downloaded successfully", flush=True)
 
-        self.unzip(self.QARDirIn)
-        self.decode(airline, tail)
-        self.upload_blob_file(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
+        # self.unzip(self.QARDirIn)
+        # self.decode2(airline, tail)
+        # self.upload_blob_file(self.blob_client, self.FLIGHT_RECORDS_CONTAINER)
 
-    def upload_blob_file(self, client, container_name):
+    def upload_blob_files(self, client, container_name):
         container_client = client.get_container_client(container=container_name)
         extension = ".csv"
         for item in os.scandir(self.OutDirIn):  # loop through items in
@@ -207,18 +269,7 @@ class Decoder:
                     airline = tokens[5]
                     tail_token = tokens[6].split(".")
                     tail = tail_token[0]
-                    raw_type = "qar"
-                    path = (
-                        raw_type
-                        + "/"
-                        + airline
-                        + "/"
-                        + date
-                        + "/"
-                        + tail
-                        + "/"
-                        + item.name
-                    )
+                    path = airline + "/" + tail + "/" + date + "/" + item.name
                     with open(file=(item), mode="rb") as data:
                         container_client.upload_blob(
                             name=path, data=data, overwrite=True
@@ -233,8 +284,7 @@ class Decoder:
     def read_from_service_bus(self):
         print("Listening...", flush=True)
         try:
-            # Read from service bus runtime-override topic to check if runtime must be overriden for app restart
-            self.read_sb_topic()
+            # Read from service bus qar-decode-request for incoming runtime
 
             with ServiceBusAdministrationClient.from_connection_string(
                 self.QUEUE_NAMESPACE_CONN
@@ -244,56 +294,18 @@ class Decoder:
                 ).active_message_count
 
             print("Message count: ", count, flush=True)
-            while count > 0:
+            if count > 0:
                 # self.restart_program()
 
-                # Install ICDs
-                self.download_icds()
-                # Install runtime package
-                self.download_package()
-                self.QAR_Decode = importlib.import_module("QAR_Decode")
-                # self.QAR_Decode.initialize_runtime(["-nojvm"])
-
-                if self.my_QAR_Decode == None:
-                    self.my_QAR_Decode = self.QAR_Decode.initialize()
-
                 # Read from service bus qar-decode queue
-                count = self.read_sb_queue()
+                sample = self.read_sb_queue()
+
+                self.process_batch(sample, count)
 
         except Exception as e:
             print("Error reading from service bus: ", e, flush=True)
             # self.my_QAR_Decode.terminate()
             self.rollback()
-
-    def read_sb_topic(self):
-        try:
-            with ServiceBusClient.from_connection_string(
-                self.TOPIC_NAMESPACE_CONN
-            ) as client:
-                # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
-                # Default is None; to receive forever.
-                with client.get_subscription_receiver(
-                    topic_name=self.QAR_DECODE_TOPIC,
-                    subscription_name=self.TOPIC_SUBSCRIPTION,
-                    max_wait_time=5,
-                ) as receiver:
-                    for msg in receiver:  # ServiceBusReceiver instance is a generator.
-                        print(str(msg))
-                        # Read each message
-                        data = json.loads(str(msg))
-                        pkg = data["package"]
-                        print("Message read from topic: ", pkg, flush=True)
-                        print("Overriding package...", flush=True)
-                        runtime = self.get_runtime()
-                        print("Current package...", runtime["package"], flush=True)
-                        runtime["package"] = pkg
-                        print("New package...", runtime["package"], flush=True)
-        except Exception as e:
-            print("Error reading from sb topic: ", e, flush=True)
-            # self.my_QAR_Decode.terminate()
-            self.rollback()
-
-            # receiver.complete_message(msg)
 
     def read_sb_queue(self):
         try:
@@ -302,33 +314,48 @@ class Decoder:
             ) as client:
                 # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
                 # Default is None; to receive forever.
-                with client.get_queue_receiver(
-                    self.QAR_DECODE_QUEUE, max_wait_time=30
-                ) as receiver:
-                    for msg in receiver:  # ServiceBusReceiver instance is a generator.
-                        # Read each message
-                        data = json.loads(str(msg))
-                        subject = data["subject"]
-                        msg_id = data["id"]
-                        print("Message id: ", msg_id, flush=True)
-                        print("Message subject: ", subject, flush=True)
+                # Get message sample
+                batch = []
+                with client.get_queue_receiver(self.QAR_DECODE_QUEUE) as receiver:
+                    received_msgs = receiver.receive_messages(
+                        max_message_count=1, max_wait_time=350
+                    )
+                    for (
+                        msg
+                    ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                        try:
+                            with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+                                auto_lock_renewer.register(
+                                    receiver, msg, max_lock_renewal_duration=3600
+                                )
+                                print("Lock lease extended", flush=True)
+                            # Read each message
+                            data = json.loads(str(msg))
 
-                        # Download qar file from path in message
-                        #self.download_blob_to_file(subject)
-                        #receiver.complete_message(msg)
-                        # If it is desired to halt receiving early, one can break out of the loop here safely.
-                        with ServiceBusAdministrationClient.from_connection_string(
-                            self.QUEUE_NAMESPACE_CONN
-                        ) as client:
-                            count = client.get_queue_runtime_properties(
-                                self.QAR_DECODE_QUEUE
-                            ).active_message_count
-                            print("Messages left in queue: ", count, flush=True)
-            return count
+                            package = data["package"]
+                            print("Message sample: ", data, flush=True)
+
+                            # Install runtime package
+                            self.download_package(package)
+
+                            # Install ICDs
+                            self.download_icds()
+
+                            self.QAR_Decode = importlib.import_module("QAR_Decode")
+                            # self.QAR_Decode.initialize_runtime(["-nojvm"])
+
+                            if self.my_QAR_Decode == None:
+                                self.my_QAR_Decode = self.QAR_Decode.initialize()
+
+                            return data
+
+                        except Exception as e:
+                            print(
+                                "Error parsing message from sb queue: ", e, flush=True
+                            )
+                            # self.my_QAR_Decode.terminate()
         except Exception as e:
             print("Error reading from sb queue: ", e, flush=True)
-            #self.my_QAR_Decode.terminate()
-            self.rollback()
 
     def unzip(self, qar_dir_in):
         extension = ".zip"

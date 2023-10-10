@@ -30,4 +30,4 @@ ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
 RUN python get-pip.py && \
     pip install -r requirements.txt
 
-ENTRYPOINT [ "python", "./scripts/__qar_decode__.py" ]
+ENTRYPOINT [ "python", "./scripts/__qar_decode_request__.py" ]
