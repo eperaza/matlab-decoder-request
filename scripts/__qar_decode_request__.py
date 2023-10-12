@@ -55,12 +55,13 @@ class Decoder:
         self.MACHINE_CPUS = 4
         self.get_runtime()
         self.workdir="C://app"
-        self.QUEUE_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=nOsOeBh7Y33u8EZe1DKUM018jaCWHipw6+ASbNrj5Rc=;EntityPath=sbq-qar-decode-request"
-        self.QAR_DECODE_QUEUE = "sbq-qar-decode-request"
-
-        self.TOPIC_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=X8ljCk1awlgQ7OcxpBW/YiGQxIWls8ieF+ASbJraWGU=;EntityPath=sbt-qar-decode-request"
-        self.QAR_DECODE_REQUEST_TOPIC = "sbt-qar-decode-request"
-        self.QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION = "sbts-qar-decode-request"
+        # Service Bus queue variables
+        self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
+        self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
+        # Service Bus topic variables
+        self.TOPIC_NAMESPACE_CONN = os.getenv("TOPIC_NAMESPACE_CONN")
+        self.QAR_DECODE_REQUEST_TOPIC = os.getenv("QAR_DECODE_REQUEST_TOPIC")
+        self.QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION = os.getenv("QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION")
 
         absolute_path = Path.cwd()
         relative_path = "input"
@@ -82,15 +83,6 @@ class Decoder:
     def auth_blob_client(self):
         client = BlobServiceClient.from_connection_string(
             self.STORAGE_CONNECTION_STRING
-        )
-        return client
-
-    def auth_queue_client(self):
-        # Setup Base64 encoding and decoding functions
-        client = QueueClient.from_connection_string(
-            self.STORAGE_CONNECTION_STRING,
-            self.QAR_DECODE_QUEUE,
-            message_decode_policy=TextBase64DecodePolicy(),
         )
         return client
 
@@ -171,7 +163,7 @@ class Decoder:
                 # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
                 # Default is None; to receive forever.
                 # Get message sample
-                with client.get_queue_receiver(self.QAR_DECODE_QUEUE) as receiver:
+                with client.get_queue_receiver(self.QAR_DECODE_REQUEST_QUEUE) as receiver:
                     received_msgs = receiver.receive_messages(
                         max_message_count=self.MACHINE_CPUS, max_wait_time=5
                     )
@@ -209,7 +201,7 @@ class Decoder:
                 self.QUEUE_NAMESPACE_CONN
             ) as client:
                 count = client.get_queue_runtime_properties(
-                    self.QAR_DECODE_QUEUE
+                    self.QAR_DECODE_REQUEST_QUEUE
                 ).active_message_count
 
                 # self.process_batch(airline, tail)
@@ -289,7 +281,7 @@ class Decoder:
                 self.QUEUE_NAMESPACE_CONN
             ) as client:
                 count = client.get_queue_runtime_properties(
-                    self.QAR_DECODE_QUEUE
+                    self.QAR_DECODE_REQUEST_QUEUE
                 ).active_message_count
 
             print("Message count: ", count, flush=True)
@@ -314,7 +306,7 @@ class Decoder:
                 # Default is None; to receive forever.
                 # Get message sample
                 batch = []
-                with client.get_queue_receiver(self.QAR_DECODE_QUEUE) as receiver:
+                with client.get_queue_receiver(self.QAR_DECODE_REQUEST_QUEUE) as receiver:
                     received_msgs = receiver.receive_messages(
                         max_message_count=1, max_wait_time=350
                     )
