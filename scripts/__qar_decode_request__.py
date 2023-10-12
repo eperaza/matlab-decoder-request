@@ -54,7 +54,7 @@ class Decoder:
         self.blob_client = self.auth_blob_client()
         self.MACHINE_CPUS = 4
         self.get_runtime()
-
+        self.workdir="C://app"
         self.QUEUE_NAMESPACE_CONN = "Endpoint=sb://sbns-tspservices-test.servicebus.windows.net/;SharedAccessKeyName=tsp-services;SharedAccessKey=nOsOeBh7Y33u8EZe1DKUM018jaCWHipw6+ASbNrj5Rc=;EntityPath=sbq-qar-decode-request"
         self.QAR_DECODE_QUEUE = "sbq-qar-decode-request"
 
@@ -105,7 +105,7 @@ class Decoder:
             runtime = json.loads(blob_text)
             self.icds = runtime["icds"]
             self.package = runtime["package"]
-            print("Runtime: ", runtime)
+            print("Runtime: ", runtime, flush=True)
             return runtime
         except Exception as e:
             print("Error retrieving runtime config: ", e, flush=True)
@@ -175,15 +175,14 @@ class Decoder:
                     received_msgs = receiver.receive_messages(
                         max_message_count=self.MACHINE_CPUS, max_wait_time=5
                     )
-                    for (
-                        msg
-                    ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                    for msg in received_msgs:  # ServiceBusReceiver instance is a generator.
+                        print("Getting message sample", flush=True)
                         try:
                             with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
                                 auto_lock_renewer.register(
-                                    receiver, msg, max_lock_renewal_duration=3600
+                                    receiver, msg, max_lock_renewal_duration=60
                                 )
-                                print("Lock lease extended", flush=True)
+                                print("Message lock lease extended", flush=True)
                             # Read each message
                             data = json.loads(str(msg))
                             airline = data["airline"]
@@ -198,7 +197,7 @@ class Decoder:
                                 batch.append(file_path)
                             receiver.complete_message(msg)
                         except Exception as e:
-                            print("Error crawling batch: ", e, flush=True)
+                            print("Error crawling batch files: ", e, flush=True)
                     for file in batch:
                         self.download_blob_to_file(file)
             if len(batch) > 0:
@@ -295,8 +294,6 @@ class Decoder:
 
             print("Message count: ", count, flush=True)
             if count > 0:
-                # self.restart_program()
-
                 # Read from service bus qar-decode queue
                 sample = self.read_sb_queue()
 
@@ -308,6 +305,7 @@ class Decoder:
             self.rollback()
 
     def read_sb_queue(self):
+        print("Reading qar-decode-request queue...", flush=True)
         try:
             with ServiceBusClient.from_connection_string(
                 self.QUEUE_NAMESPACE_CONN
@@ -320,15 +318,14 @@ class Decoder:
                     received_msgs = receiver.receive_messages(
                         max_message_count=1, max_wait_time=350
                     )
-                    for (
-                        msg
-                    ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                    for msg in received_msgs:  # ServiceBusReceiver instance is a generator.
+                        print("Adding message to batch", flush=True)
                         try:
                             with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
                                 auto_lock_renewer.register(
                                     receiver, msg, max_lock_renewal_duration=3600
                                 )
-                                print("Lock lease extended", flush=True)
+                                print("Message lock lease extended", flush=True)
                             # Read each message
                             data = json.loads(str(msg))
 
@@ -346,10 +343,13 @@ class Decoder:
 
                             if self.my_QAR_Decode == None:
                                 self.my_QAR_Decode = self.QAR_Decode.initialize()
+                            
+                            receiver.complete_message(msg)
 
                             return data
 
                         except Exception as e:
+                            receiver.dead_letter_message(msg)
                             print(
                                 "Error parsing message from sb queue: ", e, flush=True
                             )
@@ -389,8 +389,9 @@ class Decoder:
             os.chdir(self.ScriptsDirIn + "/for_redistribution_files_only")
             process = subprocess.Popen(["python", "setup.py", "install"])
             process.wait()
+            os.chdir(self.workdir)
 
-            print("Package installed")
+            print("Package installed", flush=True)
         except Exception as e:
             print("Error installing package: ", e, flush=True)
 
@@ -398,14 +399,13 @@ class Decoder:
         """Restarts the current program.
         Note: this function does not return. Any cleanup action (like
         saving data) must be done before calling this function."""
-        print("Terminating... ", flush=True)
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
-
+        print("Reinitializing with default parameters... ", flush=True)
+        subprocess.call(["python", "C://app/scripts/__qar_decode_request__.py"] + sys.argv[1:])
 
 if __name__ == "__main__":
     decoder = Decoder()
-    schedule.every(1).seconds.do(decoder.read_from_service_bus)
+    
+    schedule.every(1).minutes.do(decoder.read_from_service_bus)
 
     while True:
         schedule.run_pending()
