@@ -105,20 +105,18 @@ class Decoder:
 
     def download_icds(self):
         try:
-            blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_CONTAINER, blob=self.icds
+            client = self.blob_client.get_container_client(
+                container=self.ANALYTICS_CONTAINER
             )
-            with open(file=(self.QARDirIn + "/ICDs.zip"), mode="wb") as sample_blob:
-                download_stream = blob_client.download_blob()
-                sample_blob.write(download_stream.readall())
+            blob_list = client.list_blobs(
+                    name_starts_with="ICDs/"
+                )
+            for blob in blob_list:
+                with open(file=(self.QARDirIn + "/"+ blob.name), mode="wb") as sample_blob:
+                    download_stream = client.download_blob(blob)
+                    sample_blob.write(download_stream.readall())
+
             print("ICDs retrieved", flush=True)
-            zip_ref = zipfile.ZipFile(
-                self.QARDirIn + "/ICDs.zip"
-            )  # create zipfile object
-            # print(zip_ref.filename)
-            zip_ref.extractall(self.QARDirIn)  # extract file to dir
-            zip_ref.close()  # close file
-            os.remove(self.QARDirIn + "/ICDs.zip")  # delete zipped file
         except Exception as e:
             print("Error retrieving ICDs: ", e, flush=True)
             self.rollback()
