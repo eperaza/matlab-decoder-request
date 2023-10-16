@@ -349,18 +349,24 @@ class Decoder:
 
     def unzip(self, qar_dir_in):
         extension = ".zip"
-        # os.chdir(qar_dir_in)
 
         for item in os.scandir(qar_dir_in):  # loop through items in dir
+
             if item.name.endswith(extension):  # check for ".zip" extension
-                # file_name = os.path.abspath(item)  # get full path of files
-                zip_ref = zipfile.ZipFile(item)  # create zipfile object
-                # print(zip_ref.filename)
-                zip_ref.extractall(qar_dir_in)  # extract file to dir
-                zip_ref.close()  # close file
-                os.remove(item)  # delete zipped file
-                raw = qar_dir_in + "/raw_" + str(uuid.uuid4()) + ".dat"
-                os.rename(qar_dir_in + "/raw.dat", raw)
+                zipdata = zipfile.ZipFile(item)
+                zipinfos = zipdata.infolist()
+                try:
+                    for zipinfo in zipinfos:
+                        if (zipinfo.filename).__contains__('.dat'):
+                            zipinfo.filename = "raw_"+str(uuid.uuid4())+".dat" 
+                        if (zipinfo.filename).__contains__('.raw'):
+                            zipinfo.filename = "raw_"+str(uuid.uuid4())+".raw"
+                        zipdata.extract(zipinfo, qar_dir_in)
+                        zipdata.close()
+                        os.remove(item)  # delete zipped file
+
+                except Exception as e:
+                    print("Error unzipping: ", e, flush=True)
 
     def rollback(self):
         try:
