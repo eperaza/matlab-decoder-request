@@ -357,13 +357,14 @@ class Decoder:
                 zipinfos = zipdata.infolist()
                 try:
                     for zipinfo in zipinfos:
-                        if (zipinfo.filename).__contains__('.dat'):
-                            zipinfo.filename = "raw_"+str(uuid.uuid4())+".dat" 
-                        if (zipinfo.filename).__contains__('.raw'):
-                            zipinfo.filename = "raw_"+str(uuid.uuid4())+".raw"
-                        zipdata.extract(zipinfo, qar_dir_in)
-                        zipdata.close()
-                        os.remove(item)  # delete zipped file
+                        if ((zipinfo.filename).__contains__('.dat') or (zipinfo.filename).__contains__('.raw')):
+                            if (zipinfo.filename).__contains__('.dat'):
+                                zipinfo.filename = "raw_"+str(uuid.uuid4())+".dat" 
+                            if (zipinfo.filename).__contains__('.raw'):
+                                zipinfo.filename = "raw_"+str(uuid.uuid4())+".raw"
+                            zipdata.extract(zipinfo, qar_dir_in)
+                            zipdata.close()
+                            os.remove(item)  # delete zipped file
 
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)
