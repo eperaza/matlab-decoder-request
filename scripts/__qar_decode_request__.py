@@ -54,7 +54,6 @@ class Decoder:
         self.blob_client = self.auth_blob_client()
         self.MACHINE_CPUS = 4
         self.get_runtime()
-        self.workdir = "C://app"
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
