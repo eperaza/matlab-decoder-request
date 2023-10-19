@@ -1,0 +1,24 @@
+2023-10-19 09:55:49,874:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
+Starting parallel pool (parpool) using the 'local' profile ...
+Connected to the parallel pool (number of workers: 12).
+
+ans = 
+
+ FevalOnAllFuture with properties: 
+
+                   ID: 3
+             Function: @warning
+       CreateDateTime: 19-Oct-2023 09:55:15
+        StartDateTime: 19-Oct-2023 09:55:15
+     Running Duration: 0 days 0h 0m 0s
+                State: finished
+                Error: {}
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\raw_99048809-e8f9-429b-9f5c-3693a67f25c8.dat
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\raw_99048809-e8f9-429b-9f5c-3693a67f25c8.csv
+csv file updated
+split data
+Elapsed time is 54.148250 seconds.
+
