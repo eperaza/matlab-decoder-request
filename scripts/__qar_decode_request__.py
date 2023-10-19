@@ -148,9 +148,14 @@ class Decoder:
         _file_path = sample["file_path"]
         _package = sample["package"]
 
-        # Download master file
+        # Download and decode master file
         self.download_blob_to_file(_file_path)
-
+        self.unzip(self.QARDirIn)
+        self.decode(_airline, _tail)
+        self.upload_blob_files(
+            self.blob_client, self.FLIGHT_RECORDS_CONTAINER
+                        )
+        # Download and decode matching files
         while True:
             with ServiceBusClient.from_connection_string(
                 self.QUEUE_NAMESPACE_CONN
@@ -199,7 +204,6 @@ class Decoder:
                         self.upload_blob_files(
                             self.blob_client, self.FLIGHT_RECORDS_CONTAINER
                         )
-
                     else:
                         break
 
@@ -268,11 +272,11 @@ class Decoder:
         )
         with open(file=("logfile.log"), mode="rb") as data:
             container_client.upload_blob(name=path, data=data, overwrite=True)
-            print("File uploaded successfully", flush=True)
+            print("Log uploaded successfully", flush=True)
 
         # Log all output files
+        print("Scanning output dir...", flush=True)
         for item in os.scandir(self.OutDirIn):  # loop through items in output dir
-            print("Scanning output dir...", flush=True)
             path = (
                 "logs/"
                 + airline
@@ -357,8 +361,9 @@ class Decoder:
                 # Read from service bus qar-decode-request for incoming runtime
                 sample = self.get_master_file()
 
-                # Read from service bus qar-decode queue
-                self.read_sb_queue(sample)
+                if sample:
+                    # Read from service bus qar-decode queue
+                    self.read_sb_queue(sample)
 
                 # Get remaining queue msg count
                 count = self.get_queue_msg_count()
@@ -382,38 +387,39 @@ class Decoder:
                     received_msgs = receiver.receive_messages(
                         max_message_count=1, max_wait_time=5
                     )
-                    for (
-                        msg
-                    ) in received_msgs:  # ServiceBusReceiver instance is a generator.
-                        print("Adding message to batch", flush=True)
-                        try:
-                            with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
-                                auto_lock_renewer.register(
-                                    receiver, msg, max_lock_renewal_duration=60
+                    if received_msgs:
+                        for (
+                            msg
+                        ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                            print("Adding message to batch", flush=True)
+                            try:
+                                with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+                                    auto_lock_renewer.register(
+                                        receiver, msg, max_lock_renewal_duration=60
+                                    )
+                                    print("Message lock lease extended", flush=True)
+                                # Read each message
+                                data = json.loads(str(msg))
+
+                                package = data["package"]
+                                print("Message sample: ", data, flush=True)
+
+                                # Install runtime package
+                                self.download_package(package)
+
+                                # Install ICDs
+                                self.download_icds()
+
+                                receiver.complete_message(msg)
+
+                                return data
+
+                            except Exception as e:
+                                receiver.dead_letter_message(msg)
+                                print(
+                                    "Error parsing message from sb queue: ", e, flush=True
                                 )
-                                print("Message lock lease extended", flush=True)
-                            # Read each message
-                            data = json.loads(str(msg))
-
-                            package = data["package"]
-                            print("Message sample: ", data, flush=True)
-
-                            # Install runtime package
-                            self.download_package(package)
-
-                            # Install ICDs
-                            self.download_icds()
-
-                            receiver.complete_message(msg)
-
-                            return data
-
-                        except Exception as e:
-                            receiver.dead_letter_message(msg)
-                            print(
-                                "Error parsing message from sb queue: ", e, flush=True
-                            )
-                            # self.my_QAR_Decode.terminate()
+                                # self.my_QAR_Decode.terminate()
         except Exception as e:
             print("Error reading from sb queue: ", e, flush=True)
 

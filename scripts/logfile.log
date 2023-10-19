@@ -1,4 +1,4 @@
-2023-10-19 09:55:49,874:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+2023-10-19 14:06:21,414:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
 Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
 Starting parallel pool (parpool) using the 'local' profile ...
 Connected to the parallel pool (number of workers: 12).
@@ -9,16 +9,21 @@ ans =
 
                    ID: 3
              Function: @warning
-       CreateDateTime: 19-Oct-2023 09:55:15
-        StartDateTime: 19-Oct-2023 09:55:15
+       CreateDateTime: 19-Oct-2023 14:04:54
+        StartDateTime: 19-Oct-2023 14:04:54
      Running Duration: 0 days 0h 0m 0s
                 State: finished
                 Error: {}
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\raw_99048809-e8f9-429b-9f5c-3693a67f25c8.dat
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\raw_24ddfbca-cea3-4468-be15-72692dae0c46.dat
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\raw_f1e10603-9b5a-431b-8201-b7e6246f16a5.dat
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\raw_99048809-e8f9-429b-9f5c-3693a67f25c8.csv
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\raw_24ddfbca-cea3-4468-be15-72692dae0c46.csv
 csv file updated
 split data
-Elapsed time is 54.148250 seconds.
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\raw_f1e10603-9b5a-431b-8201-b7e6246f16a5.csv
+csv file updated
+split data
+Elapsed time is 104.361878 seconds.
 
