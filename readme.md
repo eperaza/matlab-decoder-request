@@ -10,10 +10,10 @@ docker push  crfdadecoderdev001.azurecr.io/func-mcr-linux:v1.0.0
 
 test
 
-docker build --tag matlab-windows2019:v1.0 .
+docker login crfdadecoderdev001.azurecr.io --username crfdadecoderdev001 --password 5guBqt/ixtr10RdA+ZzhDoFLEt0LXCEyexcw4Qoa2A+ACRBAl8+C
 
-docker login acrtspservicestest.azurecr.io --username acrtspservicestest --password dJfL8YFsQ0TMiaFVN5jHBa0aJdYi2iFW+VHt51DkZz+ACRCFSFcL
+docker build --tag qar-decode-request:v1.1 .
 
-docker tag matlab-windows2019:v1.0 acrtspservicestest.azurecr.io/matlab-windows2019:v1.0
+docker tag qar-decode-request:v1.1  acrtspservicestest.azurecr.io/qar-decode-request:v1.1
 
-docker push acrtspservicestest.azurecr.io/matlab-windows2019:v1.0
+docker push acrtspservicestest.azurecr.io/qar-decode-request:v1.1

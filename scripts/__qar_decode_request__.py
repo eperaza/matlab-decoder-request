@@ -145,16 +145,8 @@ class Decoder:
     def read_sb_queue(self, sample):
         _airline = sample["airline"]
         _tail = sample["tail"]
-        _file_path = sample["file_path"]
         _package = sample["package"]
-
-        # Download and decode master file
-        self.download_blob_to_file(_file_path)
-        self.unzip(self.QARDirIn)
-        self.decode(_airline, _tail)
-        self.upload_blob_files(
-            self.blob_client, self.FLIGHT_RECORDS_CONTAINER
-                        )
+                    
         # Download and decode matching files
         while True:
             with ServiceBusClient.from_connection_string(
@@ -384,7 +376,7 @@ class Decoder:
                 with client.get_queue_receiver(
                     self.QAR_DECODE_REQUEST_QUEUE
                 ) as receiver:
-                    received_msgs = receiver.receive_messages(
+                    received_msgs = receiver.peek_messages(
                         max_message_count=1, max_wait_time=5
                     )
                     if received_msgs:
@@ -393,11 +385,6 @@ class Decoder:
                         ) in received_msgs:  # ServiceBusReceiver instance is a generator.
                             print("Adding message to batch", flush=True)
                             try:
-                                with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
-                                    auto_lock_renewer.register(
-                                        receiver, msg, max_lock_renewal_duration=60
-                                    )
-                                    print("Message lock lease extended", flush=True)
                                 # Read each message
                                 data = json.loads(str(msg))
 
@@ -410,8 +397,8 @@ class Decoder:
                                 # Install ICDs
                                 self.download_icds()
 
-                                receiver.complete_message(msg)
-
+                                #receiver.complete_message(msg)
+                                time.sleep(1)
                                 return data
 
                             except Exception as e:
