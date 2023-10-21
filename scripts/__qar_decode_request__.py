@@ -40,7 +40,7 @@ from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 
 
-class Decoder:
+class _DecodeRequest:
     def __init__(self):
         load_dotenv()
         self.STORAGE_CONNECTION_STRING = os.getenv("STORAGE_CONNECTION_STRING")
@@ -146,7 +146,7 @@ class Decoder:
         _airline = sample["airline"]
         _tail = sample["tail"]
         _package = sample["package"]
-                    
+
         # Download and decode matching files
         while True:
             with ServiceBusClient.from_connection_string(
@@ -162,11 +162,8 @@ class Decoder:
                         max_message_count=self.MACHINE_CPUS, max_wait_time=5
                     )
                     if received_msgs:
-                        for (
-                            msg
-                        ) in (
-                            received_msgs
-                        ):  # ServiceBusReceiver instance is a generator.
+                        for msg in received_msgs:
+                            # ServiceBusReceiver instance is a generator.
                             try:
                                 with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
                                     auto_lock_renewer.register(
@@ -191,6 +188,9 @@ class Decoder:
                                     receiver.complete_message(msg)
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
+                                receiver.dead_letter_message(msg)
+                                print("Dead-lettering message", flush=True)
+
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
                         self.upload_blob_files(
@@ -227,7 +227,7 @@ class Decoder:
             filename="logfile.log",
             filemode="w",
             format=LOG_FORMAT,
-            force=True
+            force=True,
         )
         logging.warning(output)
 
@@ -239,7 +239,7 @@ class Decoder:
             if not item.name.startswith("ICDs"):
                 # Prints only text file present in My Folder
                 os.remove(item)
-    
+
     def log_output(self, airline, tail):
         # _date = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d")
         iso_date = datetime.datetime.now().isoformat()
@@ -380,9 +380,8 @@ class Decoder:
                         max_message_count=1, max_wait_time=5
                     )
                     if received_msgs:
-                        for (
-                            msg
-                        ) in received_msgs:  # ServiceBusReceiver instance is a generator.
+                        for msg in received_msgs:
+                            # ServiceBusReceiver instance is a generator.
                             print("Adding message to batch", flush=True)
                             try:
                                 # Read each message
@@ -397,14 +396,16 @@ class Decoder:
                                 # Install ICDs
                                 self.download_icds()
 
-                                #receiver.complete_message(msg)
+                                # receiver.complete_message(msg)
                                 time.sleep(1)
                                 return data
 
                             except Exception as e:
                                 receiver.dead_letter_message(msg)
                                 print(
-                                    "Error parsing message from sb queue: ", e, flush=True
+                                    "Error parsing message from sb queue: ",
+                                    e,
+                                    flush=True,
                                 )
                                 # self.my_QAR_Decode.terminate()
         except Exception as e:
@@ -466,7 +467,7 @@ class Decoder:
 
 
 if __name__ == "__main__":
-    decoder = Decoder()
+    decoder = _DecodeRequest()
 
     schedule.every(5).seconds.do(decoder.read_from_service_bus)
 
