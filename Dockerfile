@@ -23,11 +23,20 @@ RUN $env:PATH = 'C:\Users\ContainerAdministrator\AppData\Local\Programs\Python\P
 
 WORKDIR /app
 COPY . .
-SHELL ["cmd", "/S", "/C"]
 
-ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
+RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-RUN python get-pip.py && \
-    pip install -r requirements.txt
+RUN Invoke-WebRequest -UseBasicParsing https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py; 
+
+RUN Start-Process python -ArgumentList "get-pip.py" -NoNewWindow
+
+RUN Start-Process pip -ArgumentList 'install', '-r', 'requirements.txt' -NoNewWindow
+
+
+#SHELL ["cmd", "/S", "/C"]
+
+#ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
+
+#RUN python get-pip.py && \pip install -r requirements.txt
 
 ENTRYPOINT [ "python", "./scripts/__qar_decode_request__.py" ]
