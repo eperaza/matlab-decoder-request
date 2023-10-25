@@ -314,7 +314,6 @@ class _DecodeRequest:
                 if item.name.startswith("------") or item.name.startswith("raw"):
                     print("Ignore file:", item.name, flush=True)
                 else:
-                    print("Flight record: ", item.name, flush=True)
                     tokens = item.name.split("_")
                     date = tokens[0]
                     date = "20" + date[0:4]
@@ -326,7 +325,7 @@ class _DecodeRequest:
                         container_client.upload_blob(
                             name=path, data=data, overwrite=True
                         )
-                        print("File uploaded successfully", flush=True)
+                        print("Uploaded: ", item.name, flush=True)
         for item in os.scandir(self.OutDirIn):
             try:
                 shutil.rmtree(item)
