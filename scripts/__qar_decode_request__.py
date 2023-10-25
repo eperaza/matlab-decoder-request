@@ -92,7 +92,7 @@ class _DecodeRequest:
             downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
             blob_text = downloader.readall()
             runtime = json.loads(blob_text)
-            self.icds = runtime["icds"]
+            #self.icds = runtime["icds"]
             self.package = runtime["package"]
             print("Runtime: ", runtime, flush=True)
             return runtime

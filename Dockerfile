@@ -24,7 +24,7 @@ RUN $env:PATH = 'C:\Users\ContainerAdministrator\AppData\Local\Programs\Python\P
 WORKDIR /app
 COPY . .
 
-RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+#RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 RUN Invoke-WebRequest -UseBasicParsing https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py; 
 
