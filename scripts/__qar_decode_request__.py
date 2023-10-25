@@ -86,7 +86,7 @@ class _DecodeRequest:
     def get_runtime(self):
         try:
             blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_CONTAINER, blob="config/runtime.json"
+                container=self.ANALYTICS_CONTAINER, blob="config/qar-decode/config.json"
             )
 
             downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
@@ -246,7 +246,7 @@ class _DecodeRequest:
         now = datetime.datetime.fromisoformat(iso_date)
         date = f"{now.year:02d}" + f"{now.month:02d}"
         path = (
-            "logs/"
+            "logs/qar-decode-request/"
             + airline
             + "/"
             + tail
