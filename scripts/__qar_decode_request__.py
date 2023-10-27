@@ -188,7 +188,7 @@ class _DecodeRequest:
                                     receiver.complete_message(msg)
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
-                                receiver.dead_letter_message(msg)
+                                receiver.dead_letter_message(msg, e, "Error parsing message from sb queue")
                                 print("Dead-lettering message", flush=True)
 
                         self.unzip(self.QARDirIn)
@@ -270,7 +270,7 @@ class _DecodeRequest:
         print("Scanning output dir...", flush=True)
         for item in os.scandir(self.OutDirIn):  # loop through items in output dir
             path = (
-                "logs/"
+                "logs/qar-decode-request/"
                 + airline
                 + "/"
                 + tail
@@ -400,7 +400,7 @@ class _DecodeRequest:
                                 return data
 
                             except Exception as e:
-                                receiver.dead_letter_message(msg)
+                                receiver.dead_letter_message(msg, e, "Error parsing message from sb queue")
                                 print(
                                     "Error parsing message from sb queue: ",
                                     e,
@@ -422,11 +422,13 @@ class _DecodeRequest:
                         if (zipinfo.filename).__contains__(".dat") or (
                             zipinfo.filename
                         ).__contains__(".raw"):
+                            print("Unzipping: ", zipinfo.filename, flush=True)
                             if (zipinfo.filename).__contains__(".dat"):
                                 zipinfo.filename = "raw_" + str(uuid.uuid4()) + ".dat"
                             if (zipinfo.filename).__contains__(".raw"):
                                 zipinfo.filename = "raw_" + str(uuid.uuid4()) + ".raw"
                             zipdata.extract(zipinfo, qar_dir_in)
+                            print("File unzipped", flush=True)
                             zipdata.close()
                             os.remove(item)  # delete zipped file
 
