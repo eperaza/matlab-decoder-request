@@ -431,6 +431,9 @@ class _DecodeRequest:
                             print("File unzipped", flush=True)
                             zipdata.close()
                             os.remove(item)  # delete zipped file
+                        else:
+                            print("Unrecognized file: ", zipinfo.filename, flush=True)
+
 
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)
