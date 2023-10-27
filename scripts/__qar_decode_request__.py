@@ -419,9 +419,9 @@ class _DecodeRequest:
                 zipinfos = zipdata.infolist()
                 try:
                     for zipinfo in zipinfos:
-                        if (zipinfo.filename).__contains__(".dat") or (
+                        if (zipinfo.filename).lower().__contains__(".dat") or (
                             zipinfo.filename
-                        ).__contains__(".raw"):
+                        ).lower().__contains__(".raw"):
                             print("Unzipping: ", zipinfo.filename, flush=True)
                             if (zipinfo.filename).lower().__contains__(".dat"):
                                 zipinfo.filename = "raw_" + str(uuid.uuid4()) + ".dat"
