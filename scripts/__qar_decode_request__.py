@@ -423,9 +423,9 @@ class _DecodeRequest:
                             zipinfo.filename
                         ).__contains__(".raw"):
                             print("Unzipping: ", zipinfo.filename, flush=True)
-                            if (zipinfo.filename).__contains__(".dat"):
+                            if (zipinfo.filename).lower().__contains__(".dat"):
                                 zipinfo.filename = "raw_" + str(uuid.uuid4()) + ".dat"
-                            if (zipinfo.filename).__contains__(".raw"):
+                            if (zipinfo.filename).lower().__contains__(".raw"):
                                 zipinfo.filename = "raw_" + str(uuid.uuid4()) + ".raw"
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
