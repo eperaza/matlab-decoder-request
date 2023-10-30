@@ -385,6 +385,9 @@ class _DecodeRequest:
             print("Message count: ", count, flush=True)
 
             while count > 0:
+                # clean start
+                self.rollback()
+
                 # Read from service bus qar-decode-request for incoming runtime
                 sample = self.get_master_file()
 

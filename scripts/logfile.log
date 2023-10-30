@@ -1,10 +1,10 @@
-2023-10-30 14:09:12,812:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+2023-10-30 15:51:13,347:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
 Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
 Starting parallel pool (parpool) using the 'local' profile ...
 Connected to the parallel pool (number of workers: 12).
         1025
 
-        1025
+        3073
 
      1
 
@@ -14,34 +14,13 @@ Connected to the parallel pool (number of workers: 12).
 
         1024
 
-   346
-
-   256
-
-   256
-
-   166
-
         1024
 
         1024
 
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354546 (A6-FKD)_kd_15022023_1553_dlu.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay347543 (A6-FKE)_FKE_04012023_0501_dlu.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354546 (A6-FKD)_kd_15022023_1553_dlu.csv
-csv file updated
-split data
-        1024
-
-        1024
-
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354896 (A6-FKD)_15022023_1525_dlu.raw
-Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354896 (A6-FKD)_15022023_1525_dlu.csv
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay347543 (A6-FKE)_FKE_04012023_0501_dlu.csv
 csv file updated
 split data
         1024
@@ -52,9 +31,20 @@ split data
 
         1024
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay355026 (A6-FKD)_kd_27022023_0841_dlu.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay348037 (A6-FKE)_KE_08012023_1556_dlu.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay355026 (A6-FKD)_kd_27022023_0841_dlu.csv
+        1024
+
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay348036 (A6-FKE)_FKE_07012023_0000_dlu.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay348037 (A6-FKE)_KE_08012023_1556_dlu.csv
+csv file updated
+split data
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay348036 (A6-FKE)_FKE_07012023_0000_dlu.csv
 csv file updated
 split data
         1024
@@ -69,9 +59,9 @@ split data
 
         1024
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354895 (A6-FKD)_fkd_15022023_1616_dlu.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay347425 (A6-FKE)_03012023_1227_dlu.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354895 (A6-FKD)_fkd_15022023_1616_dlu.csv
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay347425 (A6-FKE)_03012023_1227_dlu.csv
 csv file updated
 split data
 Error. Subprocess execution was terminated. An error occurred when evaluating the result from a function. Details: 
