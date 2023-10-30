@@ -1,12 +1,26 @@
-2023-10-30 12:43:26,842:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+2023-10-30 14:09:12,812:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
 Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
 Starting parallel pool (parpool) using the 'local' profile ...
 Connected to the parallel pool (number of workers: 12).
-        3073
+        1025
 
         1025
 
+     1
+
+        3073
+
         1024
+
+        1024
+
+   346
+
+   256
+
+   256
+
+   166
 
         1024
 
@@ -14,75 +28,54 @@ Connected to the parallel pool (number of workers: 12).
 
         1024
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay350102 (A6-FKD)_kd_25012023_2035_dlu.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354546 (A6-FKD)_kd_15022023_1553_dlu.raw
 Data processed
-   218
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-    37
-
-   218
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-    37
-
-   218
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-   255
-
-     1
-
-    37
-
-        1024
-
-        1024
-
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay350373 (A6-FKD)_kd_27012023_0302_dlu.raw
-Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay350102 (A6-FKD)_kd_25012023_2035_dlu.csv
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354546 (A6-FKD)_kd_15022023_1553_dlu.csv
 csv file updated
 split data
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay350373 (A6-FKD)_kd_27012023_0302_dlu.csv
+        1024
+
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354896 (A6-FKD)_15022023_1525_dlu.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354896 (A6-FKD)_15022023_1525_dlu.csv
 csv file updated
 split data
-Elapsed time is 56.020455 seconds.
+        1024
+
+        1024
+
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay355026 (A6-FKD)_kd_27022023_0841_dlu.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay355026 (A6-FKD)_kd_27022023_0841_dlu.csv
+csv file updated
+split data
+        1024
+
+        1024
+
+        1024
+
+        1024
+
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay354895 (A6-FKD)_fkd_15022023_1616_dlu.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay354895 (A6-FKD)_fkd_15022023_1616_dlu.csv
+csv file updated
+split data
+Error. Subprocess execution was terminated. An error occurred when evaluating the result from a function. Details: 
+  File C:\Users\xc170f\AppData\Local\Temp\xc170f\mcrCache9.9\QAR_De1\QAR_Decode\QAR_Decode.m, line 142, in QAR_Decode
+Dimensions of arrays being concatenated are not consistent.
+
 

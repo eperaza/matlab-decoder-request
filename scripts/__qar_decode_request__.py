@@ -52,7 +52,7 @@ class _DecodeRequest:
         self.my_QAR_Decode = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
-        self.MACHINE_CPUS = 1
+        self.MACHINE_CPUS = 4
         self.get_runtime()
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
@@ -319,7 +319,11 @@ class _DecodeRequest:
         for item in os.scandir(self.OutDirIn):  # loop through items in
             print("Scanning output dir...", flush=True)
             if item.name.endswith(extension):  # check for ".csv" extension
-                if item.name.startswith("------") or item.name.startswith("raw"):
+                if (
+                    item.name.startswith("------")
+                    or item.name.startswith("raw")
+                    or item.name.__contains__(" ")
+                ):
                     print("Ignore file:", item.name, flush=True)
                 else:
                     try:
@@ -343,7 +347,7 @@ class _DecodeRequest:
 
                     except Exception as e:
                         try:
-                            path = "unknown"
+                            path = f"unknown/{item.name}"
                             with open(file=(item), mode="rb") as data:
                                 container_client.upload_blob(
                                     name=path, data=data, overwrite=True
@@ -407,9 +411,7 @@ class _DecodeRequest:
                 with client.get_queue_receiver(
                     self.QAR_DECODE_REQUEST_QUEUE
                 ) as receiver:
-                    received_msgs = receiver.peek_messages(
-                        max_message_count=1, max_wait_time=5
-                    )
+                    received_msgs = receiver.peek_messages(max_message_count=1)
                     if received_msgs:
                         for msg in received_msgs:
                             # ServiceBusReceiver instance is a generator.
