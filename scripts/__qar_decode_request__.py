@@ -186,6 +186,8 @@ class _DecodeRequest:
                                 ):
                                     self.download_blob_to_file(file_path)
                                     receiver.complete_message(msg)
+                                else:
+                                    break
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
                                 receiver.dead_letter_message(
