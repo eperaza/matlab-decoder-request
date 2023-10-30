@@ -52,7 +52,7 @@ class _DecodeRequest:
         self.my_QAR_Decode = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
-        self.MACHINE_CPUS = 4
+        self.MACHINE_CPUS = 1
         self.get_runtime()
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
@@ -92,7 +92,7 @@ class _DecodeRequest:
             downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
             blob_text = downloader.readall()
             runtime = json.loads(blob_text)
-            #self.icds = runtime["icds"]
+            # self.icds = runtime["icds"]
             self.package = runtime["package"]
             print("Runtime: ", runtime, flush=True)
             return runtime
@@ -167,7 +167,7 @@ class _DecodeRequest:
                             try:
                                 with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
                                     auto_lock_renewer.register(
-                                        receiver, msg, max_lock_renewal_duration=60
+                                        receiver, msg, max_lock_renewal_duration=300
                                     )
                                     print(
                                         "Message received, lock lease extended",
@@ -188,7 +188,9 @@ class _DecodeRequest:
                                     receiver.complete_message(msg)
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
-                                receiver.dead_letter_message(msg, e, "Error parsing message from sb queue")
+                                receiver.dead_letter_message(
+                                    msg, e, "Error parsing message from sb queue"
+                                )
                                 print("Dead-lettering message", flush=True)
 
                         self.unzip(self.QARDirIn)
@@ -205,18 +207,24 @@ class _DecodeRequest:
         # Decode binary
         os.chdir(self.ScriptsDirIn)
         print("Running decode subprocess...", flush=True)
+        try:
+            response = subprocess.run(
+                [
+                    "python",
+                    "__run__.py",
+                    f"{self.QARDirIn}",
+                    f"{self.OutDirIn}",
+                    f"{airline}",
+                    f"{tail}",
+                ],
+                capture_output=True,
+                timeout=3600,
+            )
+        except subprocess.TimeoutExpired:
+            print("Timeout expired. Subprocess execution was terminated.")
+        except Exception as e:
+            print("Error. Subprocess execution was terminated.", e)
 
-        response = subprocess.run(
-            [
-                "python",
-                "__run__.py",
-                f"{self.QARDirIn}",
-                f"{self.OutDirIn}",
-                f"{airline}",
-                f"{tail}",
-            ],
-            capture_output=True,
-        )
         output = response.stdout.decode()
         print("Subprocess finished with code: ", response.returncode, flush=True)
         print(output, flush=True)
@@ -314,18 +322,42 @@ class _DecodeRequest:
                 if item.name.startswith("------") or item.name.startswith("raw"):
                     print("Ignore file:", item.name, flush=True)
                 else:
-                    tokens = item.name.split("_")
-                    date = tokens[0]
-                    date = "20" + date[0:4]
-                    airline = tokens[5]
-                    tail_token = tokens[6].split(".")
-                    tail = tail_token[0]
-                    path = airline + "/" + tail + "/" + date + "/" + item.name
-                    with open(file=(item), mode="rb") as data:
-                        container_client.upload_blob(
-                            name=path, data=data, overwrite=True
-                        )
-                        print("Uploaded: ", item.name, flush=True)
+                    try:
+                        tokens = item.name.split("_")
+                        date = tokens[0]
+                        time = tokens[1]
+                        flight_id = tokens[2] if len(tokens[2]) else "----"
+                        origin = tokens[3] if len(tokens[3]) else "----"
+                        dest = tokens[4] if len(tokens[4]) else "----"
+                        date = "20" + date[0:4]
+                        airline = tokens[5]
+                        tail_token = tokens[6].split(".")
+                        tail = tail_token[0]
+                        parent = f"{airline}_{tail.upper()}_{flight_id}_{origin}_{dest}_{date}_{time}Z_----"
+                        path = f"{airline}/{tail}/{date}/{parent}/{item.name}"
+                        with open(file=(item), mode="rb") as data:
+                            container_client.upload_blob(
+                                name=path, data=data, overwrite=True
+                            )
+                            print("Uploaded: ", item.name, flush=True)
+
+                    except Exception as e:
+                        try:
+                            path = "unknown"
+                            with open(file=(item), mode="rb") as data:
+                                container_client.upload_blob(
+                                    name=path, data=data, overwrite=True
+                                )
+                            print("Uploaded as unknown: ", item.name, flush=True)
+
+                        except Exception as e:
+                            print(
+                                "Error parsing flight record name: ",
+                                item.name,
+                                e,
+                                flush=True,
+                            )
+
         for item in os.scandir(self.OutDirIn):
             try:
                 shutil.rmtree(item)
@@ -381,7 +413,7 @@ class _DecodeRequest:
                     if received_msgs:
                         for msg in received_msgs:
                             # ServiceBusReceiver instance is a generator.
-                            print("Adding message to batch", flush=True)
+                            print("Got sample message", flush=True)
                             try:
                                 # Read each message
                                 data = json.loads(str(msg))
@@ -400,7 +432,9 @@ class _DecodeRequest:
                                 return data
 
                             except Exception as e:
-                                receiver.dead_letter_message(msg, e, "Error parsing message from sb queue")
+                                receiver.dead_letter_message(
+                                    msg, e, "Error parsing message from sb queue"
+                                )
                                 print(
                                     "Error parsing message from sb queue: ",
                                     e,
@@ -433,7 +467,6 @@ class _DecodeRequest:
                             os.remove(item)  # delete zipped file
                         else:
                             print("Unrecognized file: ", zipinfo.filename, flush=True)
-
 
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)

@@ -1,24 +1,88 @@
-2023-10-19 17:38:28,148:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+2023-10-30 12:43:26,842:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
 Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
 Starting parallel pool (parpool) using the 'local' profile ...
 Connected to the parallel pool (number of workers: 12).
+        3073
 
-ans = 
+        1025
 
- FevalOnAllFuture with properties: 
+        1024
 
-                   ID: 3
-             Function: @warning
-       CreateDateTime: 19-Oct-2023 17:37:16
-        StartDateTime: 19-Oct-2023 17:37:16
-     Running Duration: 0 days 0h 0m 0s
-                State: finished
-                Error: {}
+        1024
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\raw_6cf11ce7-c92d-4a58-bd5d-cab18cef563e.dat
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay350102 (A6-FKD)_kd_25012023_2035_dlu.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\raw_6cf11ce7-c92d-4a58-bd5d-cab18cef563e.csv
+   218
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+    37
+
+   218
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+    37
+
+   218
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+   255
+
+     1
+
+    37
+
+        1024
+
+        1024
+
+        1024
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay350373 (A6-FKD)_kd_27012023_0302_dlu.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay350102 (A6-FKD)_kd_25012023_2035_dlu.csv
 csv file updated
 split data
-Elapsed time is 87.187618 seconds.
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay350373 (A6-FKD)_kd_27012023_0302_dlu.csv
+csv file updated
+split data
+Elapsed time is 56.020455 seconds.
 
