@@ -187,7 +187,8 @@ class _DecodeRequest:
                                     self.download_blob_to_file(file_path)
                                     receiver.complete_message(msg)
                                 else:
-                                    break
+                                    print("Message doesn't match sample, breaking loop... ", e, flush=True)
+                                    return
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
                                 receiver.dead_letter_message(
@@ -201,8 +202,7 @@ class _DecodeRequest:
                             self.blob_client, self.FLIGHT_RECORDS_CONTAINER
                         )
                     else:
-                        break
-
+                        return
         # self.restart_program()
 
     def decode(self, airline, tail):
