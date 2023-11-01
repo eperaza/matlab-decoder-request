@@ -67,10 +67,17 @@ class _DecodeRequest:
         absolute_path = Path.cwd()
         relative_path = "input"
         QARDirIn = absolute_path / relative_path
+        QARDirIn.mkdir(mode=777, parents=True, exist_ok=True)
         self.QARDirIn = str(Path(QARDirIn))
+
+        relative_path = "input/ICDs"
+        ICDsIn = absolute_path / relative_path
+        ICDsIn.mkdir(mode=777, parents=True, exist_ok=True)
+        self.ICDsIn = str(Path(ICDsIn))
 
         relative_path = "output"
         OutDirIn = absolute_path / relative_path
+        OutDirIn.mkdir(mode=777, parents=True, exist_ok=True)
         self.OutDirIn = str(Path(OutDirIn))
 
         relative_path = "scripts"
@@ -255,19 +262,7 @@ class _DecodeRequest:
         iso_date = datetime.datetime.now().isoformat()
         now = datetime.datetime.fromisoformat(iso_date)
         date = f"{now.year:02d}" + f"{now.month:02d}"
-        path = (
-            "logs/qar-decode-request/"
-            + airline
-            + "/"
-            + tail
-            + "/"
-            + date
-            + "/"
-            + iso_date
-            + "/"
-            + iso_date
-            + ".log"
-        )
+        path = f'logs/qar-decode-request/{airline}/{tail}/{date}/{iso_date}/{iso_date}.log'
 
         container_client = self.blob_client.get_container_client(
             container=self.ANALYTICS_CONTAINER
