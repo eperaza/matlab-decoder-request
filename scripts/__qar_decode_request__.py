@@ -100,7 +100,7 @@ class _DecodeRequest:
             blob_text = downloader.readall()
             runtime = json.loads(blob_text)
             # self.icds = runtime["icds"]
-            self.package = runtime["package"]
+            self.package = runtime["Package"]
             print("Runtime: ", runtime, flush=True)
             return runtime
         except Exception as e:
@@ -150,9 +150,10 @@ class _DecodeRequest:
             self.rollback()
 
     def read_sb_queue(self, sample):
-        _airline = sample["airline"]
-        _tail = sample["tail"]
-        _package = sample["package"]
+        _airline = sample["Airline"]
+        _tail = sample["Tail"]
+        _package = sample["Package"]
+        _overwrite = sample["Overwrite"]
 
         # Download and decode matching files
         while True:
@@ -182,14 +183,16 @@ class _DecodeRequest:
                                     )
                                 # Read each message
                                 data = json.loads(str(msg))
-                                airline = data["airline"]
-                                tail = data["tail"]
-                                file_path = data["file_path"]
-                                package = data["package"]
+                                airline = data["Airline"]
+                                tail = data["Tail"]
+                                file_path = data["FilePath"]
+                                package = data["Package"]
+                                overwrite = data["Overwrite"]
                                 if (
                                     airline == _airline
                                     and tail == _tail
                                     and package == _package
+                                    and overwrite == _overwrite
                                 ):
                                     self.download_blob_to_file(file_path)
                                     receiver.complete_message(msg)
@@ -206,7 +209,7 @@ class _DecodeRequest:
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
                         self.upload_blob_files(
-                            self.blob_client, self.FLIGHT_RECORDS_CONTAINER
+                            self.blob_client, self.FLIGHT_RECORDS_CONTAINER, overwrite
                         )
                     else:
                         return
@@ -310,7 +313,7 @@ class _DecodeRequest:
             sample_blob.write(download_stream.readall())
         print("File downloaded successfully", flush=True)
 
-    def upload_blob_files(self, client, container_name):
+    def upload_blob_files(self, client, container_name, _overwrite):
         container_client = client.get_container_client(container=container_name)
         extension = ".csv"
         for item in os.scandir(self.OutDirIn):  # loop through items in
@@ -338,7 +341,7 @@ class _DecodeRequest:
                         path = f"{airline}/{tail}/{date}/{parent}/{item.name}"
                         with open(file=(item), mode="rb") as data:
                             container_client.upload_blob(
-                                name=path, data=data, overwrite=True
+                                name=path, data=data, overwrite=_overwrite
                             )
                             print("Uploaded: ", item.name, flush=True)
 
@@ -420,7 +423,7 @@ class _DecodeRequest:
                                 # Read each message
                                 data = json.loads(str(msg))
 
-                                package = data["package"]
+                                package = data["Package"]
                                 print("Message sample: ", data, flush=True)
 
                                 # Install runtime package
