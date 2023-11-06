@@ -1,6 +1,6 @@
 # To enable ssh & remote debugging on app service change the base image to the one below
 # FROM mcr.microsoft.com/azure-functions/python:3.0-python3.7-appservice
-FROM mcr.microsoft.com/windows/servercore:ltsc2019
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 ADD https://ssd.mathworks.com/supportfiles/downloads/R2020b/Release/8/deployment_files/installer/complete/win64/MATLAB_Runtime_R2020b_Update_8_win64.zip C:\\MCR_R2020b_win64_installer.zip
 
@@ -23,20 +23,11 @@ RUN $env:PATH = 'C:\Users\ContainerAdministrator\AppData\Local\Programs\Python\P
 
 WORKDIR /app
 COPY . .
+SHELL ["cmd", "/S", "/C"]
 
-#RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
 
-RUN Invoke-WebRequest -UseBasicParsing https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py; 
-
-RUN Start-Process python -ArgumentList "get-pip.py" -NoNewWindow
-
-RUN Start-Process pip -ArgumentList 'install', '-r', 'requirements.txt' -NoNewWindow
-
-
-#SHELL ["cmd", "/S", "/C"]
-
-#ADD https://bootstrap.pypa.io/get-pip.py get-pip.py
-
-#RUN python get-pip.py && \pip install -r requirements.txt
+RUN python get-pip.py && \
+    pip install -r requirements.txt
 
 ENTRYPOINT [ "python", "./scripts/__qar_decode_request__.py" ]
