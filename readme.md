@@ -10,7 +10,7 @@ docker push  crfdadecoderdev001.azurecr.io/func-mcr-linux:v1.0.0
 
 test
 
-docker login crfdadecoderdev001.azurecr.io --username crfdadecoderdev001 --password 5guBqt/ixtr10RdA+ZzhDoFLEt0LXCEyexcw4Qoa2A+ACRBAl8+C
+docker login acrtspservicestest.azurecr.io --username acrtspservicestest --password dJfL8YFsQ0TMiaFVN5jHBa0aJdYi2iFW+VHt51DkZz+ACRCFSFcL
 
 docker build --tag qar-decode-request:v1.1 .
 
