@@ -100,7 +100,7 @@ class _DecodeRequest:
             blob_text = downloader.readall()
             runtime = json.loads(blob_text)
             # self.icds = runtime["icds"]
-            self.package = runtime["Package"]
+            self.package = runtime["package"]
             print("Runtime: ", runtime, flush=True)
             return runtime
         except Exception as e:
