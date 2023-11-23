@@ -333,12 +333,11 @@ class _DecodeRequest:
                         flight_id = tokens[2] if len(tokens[2]) else "----"
                         origin = tokens[3] if len(tokens[3]) else "----"
                         dest = tokens[4] if len(tokens[4]) else "----"
-                        date = "20" + date[0:6]
                         airline = tokens[5]
                         tail_token = tokens[6].split(".")
                         tail = tail_token[0]
-                        parent = f"{airline}_{tail.upper()}_{flight_id}_{origin}_{dest}_{date}_{time}Z_----"
-                        path = f"{airline}/{tail}/{date}/{parent}/{item.name}"
+                        parent = f"{airline}_{tail.upper()}_{flight_id}_{origin}_{dest}_20{date[0:6]}_{time}Z_----"
+                        path = f"{airline}/{tail}/20{date[0:4]}/{parent}/{item.name}"
                         with open(file=(item), mode="rb") as data:
                             container_client.upload_blob(
                                 name=path, data=data, overwrite=_overwrite
