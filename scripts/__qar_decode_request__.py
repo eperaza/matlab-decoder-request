@@ -333,7 +333,7 @@ class _DecodeRequest:
                         flight_id = tokens[2] if len(tokens[2]) else "----"
                         origin = tokens[3] if len(tokens[3]) else "----"
                         dest = tokens[4] if len(tokens[4]) else "----"
-                        date = "20" + date[0:4]
+                        date = "20" + date[0:6]
                         airline = tokens[5]
                         tail_token = tokens[6].split(".")
                         tail = tail_token[0]
