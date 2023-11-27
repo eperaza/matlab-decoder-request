@@ -50,9 +50,10 @@ class _DecodeRequest:
         self.package = None
         self.QAR_Decode = None
         self.my_QAR_Decode = None
+        self.run_date = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
-        self.MACHINE_CPUS = 4
+        self.MACHINE_CPUS = os.cpu_count()
         self.get_runtime()
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
@@ -197,7 +198,11 @@ class _DecodeRequest:
                                     self.download_blob_to_file(file_path)
                                     receiver.complete_message(msg)
                                 else:
-                                    print("Message doesn't match sample, breaking loop... ", e, flush=True)
+                                    print(
+                                        "Message doesn't match sample, breaking loop... ",
+                                        e,
+                                        flush=True,
+                                    )
                                     return
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
@@ -252,7 +257,9 @@ class _DecodeRequest:
         logging.warning(output)
 
         # Log output to storage
-        self.log_output(airline, tail)
+        self.log_output_tail_view(airline, tail)
+
+        self.log_output_run_view(airline, tail)
 
         # Clean input files
         for item in os.scandir(self.QARDirIn):
@@ -260,12 +267,55 @@ class _DecodeRequest:
                 # Prints only text file present in My Folder
                 os.remove(item)
 
-    def log_output(self, airline, tail):
-        # _date = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d")
+    def log_output_run_view(self, airline, tail):
         iso_date = datetime.datetime.now().isoformat()
         now = datetime.datetime.fromisoformat(iso_date)
         date = f"{now.year:02d}" + f"{now.month:02d}"
-        path = f'logs/qar-decode-request/{airline}/{tail}/{date}/{iso_date}/{iso_date}.log'
+
+        container_client = self.blob_client.get_container_client(
+            container=self.ANALYTICS_CONTAINER
+        )
+        try:
+            run_status = open(f"{self.OutDirIn}/runstatus.json")
+            data = json.load(run_status)
+            _input_files = data.get("inputFiles")
+            input_files = _input_files[0]
+            output = data.get("outputFiles")
+
+            for index, value in enumerate(output):
+                print("File ", index, "with name ", value)
+                # Upload log
+                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/{self.run_date}.log"
+                with open(file=("logfile.log"), mode="rb") as data:
+                    container_client.upload_blob(name=path, data=data, overwrite=True)
+                    print("Log uploaded successfully", flush=True)
+
+                # Upload runstatus.json
+                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/runstatus.json"
+                with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
+                    container_client.upload_blob(name=path, data=data, overwrite=True)
+                    print("Run status uploaded successfully", flush=True)
+
+                # Log all output files
+                print("Scanning output dir...", flush=True)
+                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/{value}"
+
+                with open(file=(f"{self.OutDirIn}/{value}"), mode="rb") as data:
+                    container_client.upload_blob(name=path, data=data, overwrite=True)
+                    print("Uploaded: ", value, flush=True)
+
+        except Exception as e:
+            path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{self.run_date}.log"
+
+            with open(file=("logfile.log"), mode="rb") as data:
+                container_client.upload_blob(name=path, data=data, overwrite=True)
+                print("Error log uploaded successfully", flush=True)
+            print("IO mapping error: ", e, flush=True)
+
+    def log_output_tail_view(self, airline, tail):
+        now = datetime.datetime.fromisoformat(self.run_date)
+        date = f"{now.year:02d}" + f"{now.month:02d}"
+        path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{self.run_date}.log"
 
         container_client = self.blob_client.get_container_client(
             container=self.ANALYTICS_CONTAINER
@@ -275,20 +325,10 @@ class _DecodeRequest:
             print("Log uploaded successfully", flush=True)
 
         # Log all output files
-        print("Scanning output dir...", flush=True)
         for item in os.scandir(self.OutDirIn):  # loop through items in output dir
-            path = (
-                "logs/qar-decode-request/"
-                + airline
-                + "/"
-                + tail
-                + "/"
-                + date
-                + "/"
-                + iso_date
-                + "/"
-                + item.name
-            )
+            print("Scanning output dir...", flush=True)
+            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{item.name}"
+
             with open(file=(item), mode="rb") as data:
                 container_client.upload_blob(name=path, data=data, overwrite=True)
                 print("Uploaded: ", item.name, flush=True)
@@ -384,6 +424,8 @@ class _DecodeRequest:
             print("Message count: ", count, flush=True)
 
             while count > 0:
+                self.run_date = datetime.datetime.now().isoformat()
+
                 # clean start
                 self.rollback()
 
@@ -460,12 +502,12 @@ class _DecodeRequest:
                         if (zipinfo.filename).lower().__contains__(".dat") or (
                             zipinfo.filename
                         ).lower().__contains__(".raw"):
-                            print("Unzipping: ", zipinfo.filename, flush=True)
-                            #shortuuid=str(uuid.uuid4())[:5]
+                            print("Unzipping: ", item.name, flush=True)
+                            # shortuuid=str(uuid.uuid4())[:5]
                             if (zipinfo.filename).lower().__contains__(".dat"):
-                                zipinfo.filename = f"{item.name}.dat" 
+                                zipinfo.filename = f"{item.name}.dat"
                             if (zipinfo.filename).lower().__contains__(".raw"):
-                                zipinfo.filename = f"{item.name}.raw" 
+                                zipinfo.filename = f"{item.name}.raw"
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
                             zipdata.close()
