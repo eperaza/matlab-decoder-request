@@ -213,9 +213,7 @@ class _DecodeRequest:
 
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
-                        self.upload_blob_files(
-                            self.blob_client, self.FLIGHT_RECORDS_CONTAINER, overwrite
-                        )
+                        
                     else:
                         return
         # self.restart_program()
@@ -257,155 +255,127 @@ class _DecodeRequest:
         logging.warning(output)
 
         # Log output to storage
-        self.log_output_tail_view(airline, tail)
+        self.upload_output(airline, tail)
 
-        self.log_output_run_view(airline, tail)
-
-        # Clean input files
-        for item in os.scandir(self.QARDirIn):
-            if not item.name.startswith("ICDs"):
-                # Prints only text file present in My Folder
-                os.remove(item)
-
-    def log_output_run_view(self, airline, tail):
-        iso_date = datetime.datetime.now().isoformat()
-        now = datetime.datetime.fromisoformat(iso_date)
-        date = f"{now.year:02d}" + f"{now.month:02d}"
-
-        container_client = self.blob_client.get_container_client(
-            container=self.ANALYTICS_CONTAINER
-        )
-        try:
-            run_status = open(f"{self.OutDirIn}/runstatus.json")
-            data = json.load(run_status)
-            _input_files = data.get("inputFiles")
-            input_files = _input_files[0]
-            output = data.get("outputFiles")
-
-            for index, value in enumerate(output):
-                print("File ", index, "with name ", value)
-                # Upload log
-                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/{self.run_date}.log"
-                with open(file=("logfile.log"), mode="rb") as data:
-                    container_client.upload_blob(name=path, data=data, overwrite=True)
-                    print("Log uploaded successfully", flush=True)
-
-                # Upload runstatus.json
-                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/runstatus.json"
-                with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
-                    container_client.upload_blob(name=path, data=data, overwrite=True)
-                    print("Run status uploaded successfully", flush=True)
-
-                # Log all output files
-                print("Scanning output dir...", flush=True)
-                path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{input_files[index]}/{value}"
-
-                with open(file=(f"{self.OutDirIn}/{value}"), mode="rb") as data:
-                    container_client.upload_blob(name=path, data=data, overwrite=True)
-                    print("Uploaded: ", value, flush=True)
-
-        except Exception as e:
-            path = f"logs/qar-decode-request/{airline}/run/{self.run_date}/{tail}/{date}/{self.run_date}.log"
-
-            with open(file=("logfile.log"), mode="rb") as data:
-                container_client.upload_blob(name=path, data=data, overwrite=True)
-                print("Error log uploaded successfully", flush=True)
-            print("IO mapping error: ", e, flush=True)
-
-    def log_output_tail_view(self, airline, tail):
-        now = datetime.datetime.fromisoformat(self.run_date)
-        date = f"{now.year:02d}" + f"{now.month:02d}"
-        path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{self.run_date}.log"
-
-        container_client = self.blob_client.get_container_client(
-            container=self.ANALYTICS_CONTAINER
-        )
-        with open(file=("logfile.log"), mode="rb") as data:
-            container_client.upload_blob(name=path, data=data, overwrite=True)
-            print("Log uploaded successfully", flush=True)
-
-        # Log all output files
-        for item in os.scandir(self.OutDirIn):  # loop through items in output dir
-            print("Scanning output dir...", flush=True)
-            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{item.name}"
-
-            with open(file=(item), mode="rb") as data:
-                container_client.upload_blob(name=path, data=data, overwrite=True)
-                print("Uploaded: ", item.name, flush=True)
-
-    def download_blob_to_file(self, file):
-        file = file.replace(
-            "/blobServices/default/containers/"
-            + self.AIRLINE_FLIGHT_DATA_CONTAINER
-            + "/blobs/",
-            "",
-        )
-        print("Downloading: ", file, flush=True)
-        blob_client = self.blob_client.get_blob_client(
-            container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=file
-        )
-
-        tokens = file.split("/")
+    def download_blob_to_file(self, path):
+        tokens = path.split("/")
+        self.airline = tokens[1]
+        self.tail = tokens[2]
         file_name = tokens.pop()
 
-        with open(file=(self.QARDirIn + "/" + file_name), mode="wb") as sample_blob:
+        blob_client = self.blob_client.get_blob_client(
+            container=self.AIRLINE_FLIGHT_DATA_CONTAINER, blob=path
+        )
+
+        relative_path = str(file_name).replace(".zip", "")
+        _dir_in = Path(self.QARDirIn) / relative_path
+        _dir_in.mkdir(mode=777, parents=True, exist_ok=True)
+        dir_in = str(Path(_dir_in))
+
+        url = self.winapi_path(dir_in + "/" + file_name)
+        with open(file=url, mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
             sample_blob.write(download_stream.readall())
         print("File downloaded successfully", flush=True)
 
-    def upload_blob_files(self, client, container_name, _overwrite):
-        container_client = client.get_container_client(container=container_name)
-        extension = ".csv"
-        for item in os.scandir(self.OutDirIn):  # loop through items in
-            print("Scanning output dir...", flush=True)
-            if item.name.endswith(extension):  # check for ".csv" extension
-                if (
-                    item.name.startswith("------")
-                    or item.name.startswith("raw")
-                    or item.name.__contains__(" ")
-                ):
-                    print("Ignore file:", item.name, flush=True)
-                else:
-                    try:
-                        tokens = item.name.split("_")
-                        date = tokens[0]
-                        time = tokens[1]
-                        flight_id = tokens[2] if len(tokens[2]) else "----"
-                        origin = tokens[3] if len(tokens[3]) else "----"
-                        dest = tokens[4] if len(tokens[4]) else "----"
-                        airline = tokens[5]
-                        tail_token = tokens[6].split(".")
-                        tail = tail_token[0]
-                        parent = f"{airline}_{tail.upper()}_{flight_id}_{origin}_{dest}_20{date[0:6]}_{time}Z_----"
-                        path = f"{airline}/{tail}/20{date[0:4]}/{parent}/{item.name}"
+        if str(url).endswith(".zip"):
+            self.unzip(dir_in)
+
+    def upload_output(self, airline, tail):
+        now = datetime.datetime.fromisoformat(self.run_date)
+        date = f"{now.year:02d}" + f"{now.month:02d}"
+
+        container_client = self.blob_client.get_container_client(
+            container=self.ANALYTICS_CONTAINER
+        )
+        # Log all output files
+        dir_in = self.winapi_path(self.QARDirIn)
+        for parent in os.scandir(dir_in):  # loop through items in output dir
+            print("Scanning input dir...", flush=True)
+            path_log = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
+            path_run_status = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
+
+            if parent.name != "ICDs":
+                # Upload log file
+                with open(file=("logfile.log"), mode="rb") as data:
+                    container_client.upload_blob(
+                        name=path_log, data=data, overwrite=True
+                    )
+                    print("Log uploaded successfully", flush=True)
+
+                # Upload run status
+                with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
+                    container_client.upload_blob(
+                        name=path_run_status, data=data, overwrite=True
+                    )
+                    print("Run status uploaded successfully", flush=True)
+
+                dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
+                for item in os.scandir(dir_in):
+                    if item.name.endswith(".csv"):
+                        path = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{item.name}"
+
+                        # Upload output files
                         with open(file=(item), mode="rb") as data:
                             container_client.upload_blob(
-                                name=path, data=data, overwrite=_overwrite
+                                name=path, data=data, overwrite=True
                             )
                             print("Uploaded: ", item.name, flush=True)
 
-                    except Exception as e:
-                        try:
-                            path = f"unknown/{item.name}"
-                            with open(file=(item), mode="rb") as data:
-                                container_client.upload_blob(
-                                    name=path, data=data, overwrite=True
-                                )
-                            print("Uploaded as unknown: ", item.name, flush=True)
+                        # Upload flight record
+                        self.upload_flight_record(
+                            self.blob_client, self.FLIGHT_RECORDS_CONTAINER, item
+                        )
+                # Remove item
+                shutil.rmtree(parent)
 
-                        except Exception as e:
-                            print(
-                                "Error parsing flight record name: ",
-                                item.name,
-                                e,
-                                flush=True,
+    def upload_flight_record(self, client, container_name, blob):
+        container_client = client.get_container_client(container=container_name)
+        extension = ".csv"
+        print("Scanning dir...", flush=True)
+        if blob.name.endswith(extension):  # check for ".csv" extension
+            if (
+                blob.name.startswith("------")
+                or blob.name.startswith("raw")
+                or blob.name.__contains__(" ")
+            ):
+                print("Ignore file:", blob.name, flush=True)
+            else:
+                try:
+                    tokens = blob.name.split("_")
+                    date = tokens[0]
+                    time = tokens[1]
+                    flight_id = tokens[2] if len(tokens[2]) else "----"
+                    origin = tokens[3] if len(tokens[3]) else "----"
+                    dest = tokens[4] if len(tokens[4]) else "----"
+                    airline = tokens[5] if len(tokens[5]) == 3 else "unknown"
+                    tail_token = tokens[6].split(".")
+                    tail = tail_token[0]
+                    parent = f"{airline}_{tail.upper()}_{flight_id}_{origin}_{dest}_20{date[0:6]}_{time}Z_----"
+                    path = f"{airline}/{tail}/20{date[0:4]}/{parent}/{blob.name}"
+
+                    with open(file=(blob), mode="rb") as data:
+                        container_client.upload_blob(
+                            name=path, data=data, overwrite=True
+                        )
+                        print("Uploaded: ", blob.name, flush=True)
+
+                except Exception as e:
+                    try:
+                        path = f"unknown/{blob.name}"
+                        with open(file=(blob), mode="rb") as data:
+                            container_client.upload_blob(
+                                name=path, data=data, overwrite=True
                             )
+                        print("Uploaded as unknown: ", blob.name, flush=True)
 
-        for item in os.scandir(self.OutDirIn):
-            try:
-                shutil.rmtree(item)
-            except OSError:
-                os.remove(item)
+                    except Exception as e:
+                        print(
+                            "Error parsing flight record name: ",
+                            blob.name,
+                            e,
+                            flush=True,
+                        )
 
     def get_queue_msg_count(self):
         with ServiceBusAdministrationClient.from_connection_string(
@@ -492,8 +462,8 @@ class _DecodeRequest:
 
     def unzip(self, qar_dir_in):
         extension = ".zip"
-
         for item in os.scandir(qar_dir_in):  # loop through items in dir
+            print("Found zip entry: ", item.name, flush=True)
             if item.name.endswith(extension):  # check for ".zip" extension
                 zipdata = zipfile.ZipFile(item)
                 zipinfos = zipdata.infolist()
@@ -503,11 +473,12 @@ class _DecodeRequest:
                             zipinfo.filename
                         ).lower().__contains__(".raw"):
                             print("Unzipping: ", item.name, flush=True)
-                            # shortuuid=str(uuid.uuid4())[:5]
                             if (zipinfo.filename).lower().__contains__(".dat"):
-                                zipinfo.filename = f"{item.name}.dat"
+                                name = item.name.replace(".zip", "")
+                                zipinfo.filename = f"{name}.dat"
                             if (zipinfo.filename).lower().__contains__(".raw"):
-                                zipinfo.filename = f"{item.name}.raw"
+                                name = item.name.replace(".zip", "")
+                                zipinfo.filename = f"{name}.raw"
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
                             zipdata.close()
@@ -548,6 +519,14 @@ class _DecodeRequest:
         subprocess.call(
             ["python", "C://app/scripts/__qar_decode_request__.py"] + sys.argv[1:]
         )
+
+    def winapi_path(self, dos_path, encoding=None):
+        if not isinstance(dos_path, str) and encoding is not None:
+            dos_path = dos_path.decode(encoding)
+        path = os.path.abspath(dos_path)
+        if path.startswith("\\\\"):
+            return "\\\\?\\UNC\\" + path[2:]
+        return "\\\\?\\" + path
 
 
 if __name__ == "__main__":

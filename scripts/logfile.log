@@ -1,71 +1,268 @@
-2023-10-30 15:51:13,347:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
+2023-12-01 14:15:39,083:WARNING ==> Warning: Column headers from the file were modified to make them valid MATLAB identifiers before creating variable names for the table. The original column headers are saved in the VariableDescriptions property.
 Set 'VariableNamingRule' to 'preserve' to use the original column headers as table variable names.
 Starting parallel pool (parpool) using the 'local' profile ...
 Connected to the parallel pool (number of workers: 12).
-        1025
-
-        3073
+     1
 
      1
 
-        3073
+     1
 
-        1024
+     1
 
-        1024
+     1
 
-        1024
+     1
 
-        1024
+     1
 
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay347543 (A6-FKE)_FKE_04012023_0501_dlu.raw
+     1
+
+     1
+
+     1
+
+     1
+
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165014__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209165014__00800001_FLD_00800001_FLD.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay347543 (A6-FKE)_FKE_04012023_0501_dlu.csv
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164246__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164246__00800001_FLD_00800001_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164246__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164246__00800001_FLD_00800001_FLD.csv
 csv file updated
 split data
-        1024
-
-        1024
-
-        1024
-
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay348037 (A6-FKE)_KE_08012023_1556_dlu.raw
-Data processed
-        1024
-
-        1024
-
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay348036 (A6-FKE)_FKE_07012023_0000_dlu.raw
-Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay348037 (A6-FKE)_KE_08012023_1556_dlu.csv
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165014__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209165014__00800001_FLD_00800001_FLD.csv
 csv file updated
 split data
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay348036 (A6-FKE)_FKE_07012023_0000_dlu.csv
-csv file updated
-split data
-        1024
+     1
 
-        1024
+   128
 
-        1024
+   128
 
-        1024
+   128
 
-        1024
-
-        1024
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\202310_replay347425 (A6-FKE)_03012023_1227_dlu.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164457__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164457__00800001_FLD_00800001_FLD.raw
 Data processed
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\output\202310_replay347425 (A6-FKE)_03012023_1227_dlu.csv
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164457__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164457__00800001_FLD_00800001_FLD.csv
 csv file updated
 split data
-Error. Subprocess execution was terminated. An error occurred when evaluating the result from a function. Details: 
-  File C:\Users\xc170f\AppData\Local\Temp\xc170f\mcrCache9.9\QAR_De1\QAR_Decode\QAR_Decode.m, line 142, in QAR_Decode
-Dimensions of arrays being concatenated are not consistent.
-
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165257__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209165257__00800006_FLD_00800006_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165257__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209165257__00800006_FLD_00800006_FLD.csv
+csv file updated
+split data
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164754__00800003_FLD_00800003_FLD.raw\2022-01_4K-SW008_B-29732_20220209164754__00800003_FLD_00800003_FLD.raw
+Data processed
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165541__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209165541__00800002_FLD_00800002_FLD.raw
+Data processed
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165509__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209165509__00800005_FLD_00800005_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164754__00800003_FLD_00800003_FLD.raw\2022-01_4K-SW008_B-29732_20220209164754__00800003_FLD_00800003_FLD.csv
+csv file updated
+split data
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164851__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209164851__00800002_FLD_00800002_FLD.raw
+Data processed
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165405__00800004_FLD_00800004_FLD.raw\2022-01_4K-SW008_B-29732_20220209165405__00800004_FLD_00800004_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165541__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209165541__00800002_FLD_00800002_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165216__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209165216__00800001_FLD_00800001_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165216__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209165216__00800001_FLD_00800001_FLD.csv
+csv file updated
+split data
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165509__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209165509__00800005_FLD_00800005_FLD.csv
+csv file updated
+split data
+   385
+
+   128
+
+   128
+
+   128
+
+   193
+
+    64
+
+   128
+
+Error : WordLength not available in ICD
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164851__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209164851__00800002_FLD_00800002_FLD.csv
+csv file updated
+split data
+     1
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165405__00800004_FLD_00800004_FLD.raw\2022-01_4K-SW008_B-29732_20220209165405__00800004_FLD_00800004_FLD.csv
+csv file updated
+split data
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164719__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209164719__00800005_FLD_00800005_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164719__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209164719__00800005_FLD_00800005_FLD.csv
+csv file updated
+split data
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164449__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164449__00800001_FLD_00800001_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164449__00800001_FLD_00800001_FLD.raw\2022-01_4K-SW008_B-29732_20220209164449__00800001_FLD_00800001_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165342__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209165342__00800005_FLD_00800005_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165342__00800005_FLD_00800005_FLD.raw\2022-01_4K-SW008_B-29732_20220209165342__00800005_FLD_00800005_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164807__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209164807__00800006_FLD_00800006_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164807__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209164807__00800006_FLD_00800006_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164724__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209164724__00800002_FLD_00800002_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164724__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209164724__00800002_FLD_00800002_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165406__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209165406__00800002_FLD_00800002_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165406__00800002_FLD_00800002_FLD.raw\2022-01_4K-SW008_B-29732_20220209165406__00800002_FLD_00800002_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165522__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209165522__00800006_FLD_00800006_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165522__00800006_FLD_00800006_FLD.raw\2022-01_4K-SW008_B-29732_20220209165522__00800006_FLD_00800006_FLD.csv
+csv file updated
+split data
+     1
+
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164938__00800004_FLD_00800004_FLD.raw\2022-01_4K-SW008_B-29732_20220209164938__00800004_FLD_00800004_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209164938__00800004_FLD_00800004_FLD.raw\2022-01_4K-SW008_B-29732_20220209164938__00800004_FLD_00800004_FLD.csv
+csv file updated
+split data
+   128
+
+   128
+
+   128
+
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165523__00800000_FLD_00800000_FLD.raw\2022-01_4K-SW008_B-29732_20220209165523__00800000_FLD_00800000_FLD.raw
+Data processed
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\2022-01_4K-SW008_B-29732_20220209165523__00800000_FLD_00800000_FLD.raw\2022-01_4K-SW008_B-29732_20220209165523__00800000_FLD_00800000_FLD.csv
+csv file updated
+split data
+Elapsed time is 249.238984 seconds.
 
