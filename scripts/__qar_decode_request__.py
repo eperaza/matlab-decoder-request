@@ -305,11 +305,15 @@ class _DecodeRequest:
                     print("Log uploaded successfully", flush=True)
 
                 # Upload run status
-                with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
-                    container_client.upload_blob(
-                        name=path_run_status, data=data, overwrite=True
-                    )
-                    print("Run status uploaded successfully", flush=True)
+                try:
+                    with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
+                        container_client.upload_blob(
+                            name=path_run_status, data=data, overwrite=True
+                        )
+                        print("Run status uploaded successfully", flush=True)
+                except Exception as e:
+                    print("Run status file does not exist", flush=True)
+
 
                 dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
                 for item in os.scandir(dir_in):
