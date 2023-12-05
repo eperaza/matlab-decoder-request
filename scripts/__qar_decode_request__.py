@@ -213,6 +213,7 @@ class _DecodeRequest:
 
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
+                        self.rollback()
                         
                     else:
                         return
