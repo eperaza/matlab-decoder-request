@@ -17,6 +17,7 @@ import uuid
 import shutil
 import importlib
 import subprocess
+import re
 from pathlib import Path
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
@@ -328,7 +329,7 @@ class _DecodeRequest:
                                 container_client.upload_blob(
                                     name=path, data=data, overwrite=True
                                 )
-                                print("Uploaded: ", item.name, flush=True)
+                                print("Uploaded to logs: ", item.name, flush=True)
 
                             # Upload flight record
                             self.upload_flight_record(
@@ -343,14 +344,11 @@ class _DecodeRequest:
         container_client = client.get_container_client(container=container_name)
         extension = ".csv"
         print("Scanning dir...", flush=True)
+
+        pattern = r"^(\d){6}"
+
         if blob.name.endswith(extension):  # check for ".csv" extension
-            if (
-                blob.name.startswith("------")
-                or blob.name.startswith("raw")
-                or blob.name.__contains__(" ")
-            ):
-                print("Ignore file:", blob.name, flush=True)
-            else:
+            if re.match(pattern, blob.name):
                 try:
                     tokens = blob.name.split("_")
                     date = tokens[0]
@@ -368,7 +366,7 @@ class _DecodeRequest:
                         container_client.upload_blob(
                             name=path, data=data, overwrite=True
                         )
-                        print("Uploaded: ", blob.name, flush=True)
+                        print("Uploaded flight record: ", blob.name, flush=True)
 
                 except Exception as e:
                     try:
@@ -386,6 +384,8 @@ class _DecodeRequest:
                             e,
                             flush=True,
                         )
+            else:
+                print("Ignore flight record:", blob.name, flush=True)
 
     def get_queue_msg_count(self):
         with ServiceBusAdministrationClient.from_connection_string(
