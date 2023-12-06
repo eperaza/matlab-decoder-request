@@ -213,8 +213,12 @@ class _DecodeRequest:
 
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
+
+                        # Log output to storage
+                        self.upload_output(airline, tail)
+
                         self.rollback()
-                        
+
                     else:
                         return
         # self.restart_program()
@@ -255,9 +259,6 @@ class _DecodeRequest:
         )
         logging.warning(output)
 
-        # Log output to storage
-        self.upload_output(airline, tail)
-
     def download_blob_to_file(self, path):
         tokens = path.split("/")
         self.airline = tokens[1]
@@ -283,56 +284,60 @@ class _DecodeRequest:
             self.unzip(dir_in)
 
     def upload_output(self, airline, tail):
-        now = datetime.datetime.fromisoformat(self.run_date)
-        date = f"{now.year:02d}" + f"{now.month:02d}"
+        try:
+            now = datetime.datetime.fromisoformat(self.run_date)
+            date = f"{now.year:02d}" + f"{now.month:02d}"
 
-        container_client = self.blob_client.get_container_client(
-            container=self.ANALYTICS_CONTAINER
-        )
-        # Log all output files
-        dir_in = self.winapi_path(self.QARDirIn)
-        for parent in os.scandir(dir_in):  # loop through items in output dir
-            print("Scanning input dir...", flush=True)
-            path_log = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
-            path_run_status = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
+            container_client = self.blob_client.get_container_client(
+                container=self.ANALYTICS_CONTAINER
+            )
+            # Log all output files
+            dir_in = self.winapi_path(self.QARDirIn)
+            for parent in os.scandir(dir_in):  # loop through items in output dir
+                print("Scanning input dir...", flush=True)
+                path_log = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
+                path_run_status = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
 
-            if parent.name != "ICDs":
-                # Upload log file
-                with open(file=("logfile.log"), mode="rb") as data:
-                    container_client.upload_blob(
-                        name=path_log, data=data, overwrite=True
-                    )
-                    print("Log uploaded successfully", flush=True)
-
-                # Upload run status
-                try:
-                    with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
+                if parent.name != "ICDs":
+                    # Upload log file
+                    with open(file=("logfile.log"), mode="rb") as data:
                         container_client.upload_blob(
-                            name=path_run_status, data=data, overwrite=True
+                            name=path_log, data=data, overwrite=True
                         )
-                        print("Run status uploaded successfully", flush=True)
-                except Exception as e:
-                    print("Run status file does not exist", flush=True)
+                        print("Log uploaded successfully", flush=True)
 
-
-                dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
-                for item in os.scandir(dir_in):
-                    if item.name.endswith(".csv"):
-                        path = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{item.name}"
-
-                        # Upload output files
-                        with open(file=(item), mode="rb") as data:
+                    # Upload run status
+                    try:
+                        with open(
+                            file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
+                        ) as data:
                             container_client.upload_blob(
-                                name=path, data=data, overwrite=True
+                                name=path_run_status, data=data, overwrite=True
                             )
-                            print("Uploaded: ", item.name, flush=True)
+                            print("Run status uploaded successfully", flush=True)
+                    except Exception as e:
+                        print("Run status file does not exist", flush=True)
 
-                        # Upload flight record
-                        self.upload_flight_record(
-                            self.blob_client, self.FLIGHT_RECORDS_CONTAINER, item
-                        )
-                # Remove item
-                shutil.rmtree(parent)
+                    dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
+                    for item in os.scandir(dir_in):
+                        if item.name.endswith(".csv"):
+                            path = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{item.name}"
+
+                            # Upload output files
+                            with open(file=(item), mode="rb") as data:
+                                container_client.upload_blob(
+                                    name=path, data=data, overwrite=True
+                                )
+                                print("Uploaded: ", item.name, flush=True)
+
+                            # Upload flight record
+                            self.upload_flight_record(
+                                self.blob_client, self.FLIGHT_RECORDS_CONTAINER, item
+                            )
+                    # Remove item
+                    shutil.rmtree(parent)
+        except Exception as e:
+            print("Error uploading output files: ", e, flush=True)
 
     def upload_flight_record(self, client, container_name, blob):
         container_client = client.get_container_client(container=container_name)
