@@ -527,7 +527,10 @@ class _DecodeRequest:
             for item in os.scandir(self.OutDirIn):
                 # Prints only text file present in My Folder
                 os.remove(item)
-            shutil.rmtree(self.QARDirIn)
+            for item in os.scandir(self.QARDirIn):
+                if not item.name.startswith("ICDs"):
+                    # Prints only text file present in My Folder
+                    os.remove(item)
         except Exception as e:
             print("Error cleaning: ", e, flush=True)
 
