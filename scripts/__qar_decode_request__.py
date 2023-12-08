@@ -65,8 +65,10 @@ class _DecodeRequest:
         self.QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION = os.getenv(
             "QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION"
         )
+        self.root = Path.cwd()
 
-        absolute_path = Path.cwd()
+    def clean_start(self):
+        absolute_path = self.root
         relative_path = "input"
         QARDirIn = absolute_path / relative_path
         QARDirIn.mkdir(mode=777, parents=True, exist_ok=True)
@@ -107,7 +109,6 @@ class _DecodeRequest:
             return runtime
         except Exception as e:
             print("Error retrieving runtime config: ", e, flush=True)
-            self.rollback()
 
     def download_icds(self):
         try:
@@ -125,7 +126,6 @@ class _DecodeRequest:
             print("ICDs retrieved", flush=True)
         except Exception as e:
             print("Error retrieving ICDs: ", e, flush=True)
-            self.rollback()
 
     def download_package(self, package):
         try:
@@ -149,7 +149,6 @@ class _DecodeRequest:
             self.install_package()
         except Exception as e:
             print("Error retrieving package: ", e, flush=True)
-            self.rollback()
 
     def read_sb_queue(self, sample):
         _airline = sample["Airline"]
@@ -207,10 +206,16 @@ class _DecodeRequest:
                                     return
                             except Exception as e:
                                 print("Error crawling files: ", e, flush=True)
-                                receiver.dead_letter_message(
-                                    msg, e, "Error parsing message from sb queue"
-                                )
-                                print("Dead-lettering message", flush=True)
+                                try:
+                                    receiver.dead_letter_message(
+                                        msg, e, "Error parsing message from sb queue"
+                                    )
+                                    print("Dead-lettering message", flush=True)
+                                except Exception as e:
+                                    print(
+                                        "Could not dead-letter message, lock expired",
+                                        flush=True,
+                                    )
 
                         self.unzip(self.QARDirIn)
                         self.decode(airline, tail)
@@ -276,6 +281,9 @@ class _DecodeRequest:
         dir_in = str(Path(_dir_in))
 
         url = self.winapi_path(dir_in + "/" + file_name)
+
+        print("Downloading =>", file_name, flush=True)
+
         with open(file=url, mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
             sample_blob.write(download_stream.readall())
@@ -425,6 +433,7 @@ class _DecodeRequest:
 
                 # clean start
                 self.rollback()
+                self.clean_start()
 
                 # Read from service bus qar-decode-request for incoming runtime
                 sample = self.get_master_file()
@@ -438,7 +447,6 @@ class _DecodeRequest:
 
         except Exception as e:
             print("Error reading from service bus: ", e, flush=True)
-            self.rollback()
 
     def get_master_file(self):
         print("Reading qar-decode-request queue...", flush=True)
@@ -483,7 +491,6 @@ class _DecodeRequest:
                                     e,
                                     flush=True,
                                 )
-                                # self.my_QAR_Decode.terminate()
         except Exception as e:
             print("Error reading from sb queue: ", e, flush=True)
 
@@ -499,7 +506,7 @@ class _DecodeRequest:
                         if (zipinfo.filename).lower().__contains__(".dat") or (
                             zipinfo.filename
                         ).lower().__contains__(".raw"):
-                            print("Unzipping: ", item.name, flush=True)
+                            print("Unzipping =>", item.name, flush=True)
                             if (zipinfo.filename).lower().__contains__(".dat"):
                                 name = item.name.replace(".zip", "")
                                 zipinfo.filename = f"{name}.dat"
@@ -508,11 +515,10 @@ class _DecodeRequest:
                                 zipinfo.filename = f"{name}.raw"
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
-                            zipdata.close()
-                            os.remove(item)  # delete zipped file
                         else:
-                            print("Unrecognized file: ", zipinfo.filename, flush=True)
-
+                            print("Unrecognized file:", zipinfo.filename, flush=True)
+                    zipdata.close()
+                    os.remove(item)  # delete zipped file
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)
 
@@ -521,10 +527,7 @@ class _DecodeRequest:
             for item in os.scandir(self.OutDirIn):
                 # Prints only text file present in My Folder
                 os.remove(item)
-            for item in os.scandir(self.QARDirIn):
-                if not item.name.startswith("ICDs"):
-                    # Prints only text file present in My Folder
-                    os.remove(item)
+            shutil.rmtree(self.QARDirIn)
         except Exception as e:
             print("Error cleaning: ", e, flush=True)
 
