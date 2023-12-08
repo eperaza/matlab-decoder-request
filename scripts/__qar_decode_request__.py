@@ -296,16 +296,22 @@ class _DecodeRequest:
             dir_in = self.winapi_path(self.QARDirIn)
             for parent in os.scandir(dir_in):  # loop through items in output dir
                 print("Scanning input dir...", flush=True)
-                path_log = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
-                path_run_status = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
+                tails_path_log = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
+                tails_path_run_status = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
+                date_path_log = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{parent.name}/{self.run_date}.log"
+                date_path_run_status = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{parent.name}/runstatus.json"
 
                 if parent.name != "ICDs":
                     # Upload log file
                     with open(file=("logfile.log"), mode="rb") as data:
                         container_client.upload_blob(
-                            name=path_log, data=data, overwrite=True
+                            name=tails_path_log, data=data, overwrite=True
                         )
-                        print("Log uploaded successfully", flush=True)
+                    with open(file=("logfile.log"), mode="rb") as data:
+                        container_client.upload_blob(
+                            name=date_path_log, data=data, overwrite=True
+                        )
+                    print("Log uploaded successfully", flush=True)
 
                     # Upload run status
                     try:
@@ -313,23 +319,34 @@ class _DecodeRequest:
                             file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
                         ) as data:
                             container_client.upload_blob(
-                                name=path_run_status, data=data, overwrite=True
+                                name=tails_path_run_status, data=data, overwrite=True
                             )
-                            print("Run status uploaded successfully", flush=True)
+                        with open(
+                            file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
+                        ) as data:
+                            container_client.upload_blob(
+                                name=date_path_run_status, data=data, overwrite=True
+                            )
+                        print("Run status uploaded successfully", flush=True)
                     except Exception as e:
                         print("Run status file does not exist", flush=True)
 
                     dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
                     for item in os.scandir(dir_in):
                         if item.name.endswith(".csv"):
-                            path = f"logs/qar-decode-request/{airline}/run/{tail}/{date}/{self.run_date}/{parent.name}/{item.name}"
+                            tails_path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/{item.name}"
+                            date_path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{parent.name}/{item.name}"
 
                             # Upload output files
                             with open(file=(item), mode="rb") as data:
                                 container_client.upload_blob(
-                                    name=path, data=data, overwrite=True
+                                    name=tails_path, data=data, overwrite=True
                                 )
-                                print("Uploaded to logs: ", item.name, flush=True)
+                            with open(file=(item), mode="rb") as data:
+                                container_client.upload_blob(
+                                    name=date_path, data=data, overwrite=True
+                                )
+                            print("Uploaded to logs: ", item.name, flush=True)
 
                             # Upload flight record
                             self.upload_flight_record(
