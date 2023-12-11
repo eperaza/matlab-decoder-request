@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
+from azure.data.tables import TableServiceClient
 from azure.storage.queue import (
     QueueServiceClient,
     QueueClient,
@@ -54,6 +55,7 @@ class _DecodeRequest:
         self.run_date = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
+        self.table_client = self.auth_table_client()
         self.MACHINE_CPUS = os.cpu_count()
         self.get_runtime()
         # Service Bus queue variables
@@ -66,8 +68,9 @@ class _DecodeRequest:
             "QAR_DECODE_REQUEST_TOPIC_SUBSCRIPTION"
         )
         self.root = Path.cwd()
+        self.create_dirs()
 
-    def clean_start(self):
+    def create_dirs(self):
         absolute_path = self.root
         relative_path = "input"
         QARDirIn = absolute_path / relative_path
@@ -90,6 +93,12 @@ class _DecodeRequest:
 
     def auth_blob_client(self):
         client = BlobServiceClient.from_connection_string(
+            self.STORAGE_CONNECTION_STRING
+        )
+        return client
+
+    def auth_table_client(self):
+        client = TableServiceClient.from_connection_string(
             self.STORAGE_CONNECTION_STRING
         )
         return client
@@ -195,8 +204,8 @@ class _DecodeRequest:
                                     and package == _package
                                     and overwrite == _overwrite
                                 ):
-                                    self.download_blob_to_file(file_path)
                                     receiver.complete_message(msg)
+                                    self.download_blob_to_file(file_path)
                                 else:
                                     print(
                                         "Message doesn't match sample, breaking loop... ",
@@ -205,7 +214,7 @@ class _DecodeRequest:
                                     )
                                     return
                             except Exception as e:
-                                print("Error crawling files: ", e, flush=True)
+                                print("Error processing message:", e, flush=True)
                                 try:
                                     receiver.dead_letter_message(
                                         msg, e, "Error parsing message from sb queue"
@@ -223,9 +232,8 @@ class _DecodeRequest:
                         # Log output to storage
                         self.upload_output(airline, tail)
 
-                        self.rollback()
-
                     else:
+                        print("Didn't receive any messages", flush=True)
                         return
         # self.restart_program()
 
@@ -265,6 +273,30 @@ class _DecodeRequest:
         )
         logging.warning(output)
 
+    def log_to_processed(self, blob):
+        try:
+            FILE_NAME = blob
+            PARTITION_KEY = "1"
+
+            my_entity = {
+                "PartitionKey": PARTITION_KEY,
+                "RowKey": f"{uuid.uuid4()}",
+                "FileName": FILE_NAME,
+            }
+
+            table_client = self.table_client.create_table_if_not_exists(
+                table_name="AirlineFlightDataProcessed"
+            )
+
+            entity = table_client.create_entity(entity=my_entity)
+            print(
+                "Inserted into AirlineFlightDataProcessed =>",
+                entity,
+                flush=True,
+            )
+        except Exception as e:
+            print("Error inserting into AirlineFlightDataProcessed =>", e, flush=True)
+
     def download_blob_to_file(self, path):
         tokens = path.split("/")
         self.airline = tokens[1]
@@ -291,6 +323,8 @@ class _DecodeRequest:
 
         if str(url).endswith(".zip"):
             self.unzip(dir_in)
+
+        self.log_to_processed(path)
 
     def upload_output(self, airline, tail):
         try:
@@ -432,8 +466,8 @@ class _DecodeRequest:
                 self.run_date = datetime.datetime.now().isoformat()
 
                 # clean start
-                self.rollback()
-                self.clean_start()
+                self.clean()
+                self.create_dirs()
 
                 # Read from service bus qar-decode-request for incoming runtime
                 sample = self.get_master_file()
@@ -522,15 +556,10 @@ class _DecodeRequest:
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)
 
-    def rollback(self):
+    def clean(self):
         try:
-            for item in os.scandir(self.OutDirIn):
-                # Prints only text file present in My Folder
-                os.remove(item)
-            for item in os.scandir(self.QARDirIn):
-                if not item.name.startswith("ICDs"):
-                    # Prints only text file present in My Folder
-                    os.remove(item)
+            shutil.rmtree(self.OutDirIn)
+            shutil.rmtree(self.QARDirIn)
         except Exception as e:
             print("Error cleaning: ", e, flush=True)
 

@@ -1,5 +1,6 @@
 azure.storage.blob
 azure.storage.queue
+azure-data-tabless
 python-dotenv
 schedule
 azure.servicebus
