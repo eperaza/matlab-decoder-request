@@ -463,7 +463,7 @@ class _DecodeRequest:
             print("Message count: ", count, flush=True)
 
             while count > 0:
-                self.run_date = datetime.datetime.now().isoformat()
+                self.run_date = datetime.datetime.utcnow().isoformat()
 
                 # clean start
                 self.clean()
