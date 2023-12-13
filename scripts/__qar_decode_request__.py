@@ -540,11 +540,11 @@ class _DecodeRequest:
                         if (zipinfo.filename).lower().__contains__(".dat") or (
                             zipinfo.filename
                         ).lower().__contains__(".raw"):
-                            print("Unzipping =>", item.name, flush=True)
+                            print("Unzipping =>", zipinfo.filename, flush=True)
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
                         else:
-                            print("Unrecognized file:", zipinfo.filename, flush=True)
+                            print("Unrecognized file: ", zipinfo.filename, flush=True)
                     zipdata.close()
                     os.remove(item)  # delete zipped file
                 except Exception as e:
