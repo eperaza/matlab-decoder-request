@@ -1,2 +1,36 @@
-2023-12-10 21:48:02,666:WARNING ==> Error: ICD Mapping FIle Missing
+2023-12-12 21:39:45,962:WARNING ==>     10
+
+Starting parallel pool (parpool) using the 'local' profile ...
+Connected to the parallel pool (number of workers: 12).
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92544 (SP-LRD)\SPLRD_20230201094501-965576551.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92577 (SP-LRD)\SPLRD_20230202122501-538253383.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92612 (SP-LRD)\SPLRD_20230203140001-812938170.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92689 (SP-LRD)\SPLRD_20230205145001-618858842.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92730 (SP-LRD)\LRD_06FEB2023_FLIGHT  kopia.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92768 (SP-LRD)\SP-LRD 08FEB2023_FLIGHT.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92786 (SP-LRD)\SP-LRD 09FEB2023_FLIGHT.raw
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92577 (SP-LRD)\SPLRD_20230202122501-714373060.raw
+CPL Processed
+Split Data
+CPL Processed
+Split Data
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92544 (SP-LRD)\SPLRD_20230201094502-164909327.raw
+CPL Processed
+Split Data
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92612 (SP-LRD)\SPLRD_20230203140007-526285770.raw
+CPL Processed
+CPL Processed
+Split Data
+Split Data
+CPL Processed
+Split Data
+CPL Processed
+Split Data
+C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\replay92689 (SP-LRD)\SPLRD_20230205145002-642928498.raw
+Error. Subprocess execution was terminated. An error occurred when evaluating the result from a function. Details: 
+  File C:\Users\xc170f\AppData\Local\Temp\xc170f\mcrCache9.9\QAR_De1\QAR_Decode\Cpl_Decode.m, line 20, in Cpl_Decode
+
+  File C:\Users\xc170f\AppData\Local\Temp\xc170f\mcrCache9.9\QAR_De1\QAR_Decode\QAR_Decode.m, line 615, in QAR_Decode
+Dimensions of arrays being concatenated are not consistent.
+
 

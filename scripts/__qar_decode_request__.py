@@ -252,7 +252,7 @@ class _DecodeRequest:
                     f"{tail}",
                 ],
                 capture_output=True,
-                timeout=3600,
+                timeout=10800,
             )
         except subprocess.TimeoutExpired:
             print("Timeout expired. Subprocess execution was terminated.")
@@ -370,6 +370,7 @@ class _DecodeRequest:
                                 name=date_path_run_status, data=data, overwrite=True
                             )
                         print("Run status uploaded successfully", flush=True)
+                        os.remove(f"{self.OutDirIn}/runstatus.json")
                     except Exception as e:
                         print("Run status file does not exist", flush=True)
 
@@ -549,6 +550,9 @@ class _DecodeRequest:
                     os.remove(item)  # delete zipped file
                 except Exception as e:
                     print("Error unzipping: ", e, flush=True)
+                    zipdata.close()
+                    shutil.rmtree(qar_dir_in)  # delete zipped file
+
 
     def clean(self):
         try:
