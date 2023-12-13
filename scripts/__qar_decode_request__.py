@@ -541,12 +541,6 @@ class _DecodeRequest:
                             zipinfo.filename
                         ).lower().__contains__(".raw"):
                             print("Unzipping =>", item.name, flush=True)
-                            if (zipinfo.filename).lower().__contains__(".dat"):
-                                name = item.name.replace(".zip", "")
-                                zipinfo.filename = f"{name}.dat"
-                            if (zipinfo.filename).lower().__contains__(".raw"):
-                                name = item.name.replace(".zip", "")
-                                zipinfo.filename = f"{name}.raw"
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
                         else:
