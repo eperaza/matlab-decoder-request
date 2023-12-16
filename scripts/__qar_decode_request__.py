@@ -556,7 +556,7 @@ class _DecodeRequest:
                             or (zipinfo.filename).lower().__contains__(".raw")
                             or (zipinfo.filename).endswith("-CPL")
                         ):
-                            print("Unzipping =>", zipinfo.filename, flush=True)
+                            print("Unpacking =>", zipinfo.filename, flush=True)
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
                         else:
