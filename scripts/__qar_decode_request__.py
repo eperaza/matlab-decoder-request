@@ -160,10 +160,10 @@ class _DecodeRequest:
             print("Error retrieving package: ", e, flush=True)
 
     def read_sb_queue(self, sample):
-        _airline = sample["Airline"]
-        _tail = sample["Tail"]
-        _package = sample["Package"]
-        _overwrite = sample["Overwrite"]
+        _airline = sample.get("Airline")
+        _tail = sample.get("Tail")
+        _package = sample.get("Package")
+        _overwrite = sample.get("Overwrite")
 
         # Download and decode matching files
         while True:
@@ -183,36 +183,41 @@ class _DecodeRequest:
                         for msg in received_msgs:
                             # ServiceBusReceiver instance is a generator.
                             try:
-                                with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
-                                    auto_lock_renewer.register(
-                                        receiver, msg, max_lock_renewal_duration=300
-                                    )
-                                    print(
-                                        "Message received, lock lease extended",
-                                        flush=True,
-                                    )
                                 # Read each message
                                 data = json.loads(str(msg))
-                                airline = data["Airline"]
-                                tail = data["Tail"]
-                                file_path = data["FilePath"]
-                                package = data["Package"]
-                                overwrite = data["Overwrite"]
+                                airline = data.get("Airline")
+                                tail = data.get("Tail")
+                                file_path = data.get("FilePath")
+                                package = data.get("Package")
+                                overwrite = data.get("Overwrite")
                                 if (
                                     airline == _airline
                                     and tail == _tail
                                     and package == _package
                                     and overwrite == _overwrite
                                 ):
+                                    print(
+                                        "Message matches sample",
+                                        flush=True,
+                                    )
+                                    """
+                                    with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+                                        auto_lock_renewer.register(
+                                            receiver, msg, max_lock_renewal_duration=300
+                                        )
+                                        print(
+                                            "Message received, lock lease extended",
+                                            flush=True,
+                                        )
+                                    """
                                     receiver.complete_message(msg)
                                     self.download_blob_to_file(file_path)
                                 else:
                                     print(
                                         "Message doesn't match sample, breaking loop... ",
-                                        e,
                                         flush=True,
                                     )
-                                    return
+                                    # continue
                             except Exception as e:
                                 print("Error processing message:", e, flush=True)
                                 try:
@@ -231,47 +236,55 @@ class _DecodeRequest:
 
                         # Log output to storage
                         self.upload_output(airline, tail)
-
+                        # time.sleep(30)
                     else:
-                        print("Didn't receive any messages", flush=True)
+                        print("Didn't receive any messages...", flush=True)
+                        time.sleep(30)
                         return
         # self.restart_program()
 
     def decode(self, airline, tail):
         # Decode binary
         os.chdir(self.ScriptsDirIn)
-        print("Running decode subprocess...", flush=True)
-        try:
-            response = subprocess.run(
-                [
-                    "python",
-                    "__run__.py",
-                    f"{self.QARDirIn}",
-                    f"{self.OutDirIn}",
-                    f"{airline}",
-                    f"{tail}",
-                ],
-                capture_output=True,
-                timeout=10800,
+
+        count = 0
+        for path in os.scandir(self.ScriptsDirIn):
+            if path.is_dir():
+                count += 1
+
+        if count > 1:
+            print("Running decode subprocess...", flush=True)
+            try:
+                response = subprocess.run(
+                    [
+                        "python",
+                        "__run__.py",
+                        f"{self.QARDirIn}",
+                        f"{self.OutDirIn}",
+                        f"{airline}",
+                        f"{tail}",
+                    ],
+                    capture_output=True,
+                    timeout=10800,
+                )
+            except subprocess.TimeoutExpired:
+                print("Timeout expired. Subprocess execution was terminated.")
+            except Exception as e:
+                print("Error. Subprocess execution was terminated.", e)
+
+            output = response.stdout.decode()
+            print("Subprocess finished with code: ", response.returncode, flush=True)
+            print(output, flush=True)
+
+            LOG_FORMAT = "%(asctime)s:%(levelname)s ==> %(message)s"
+            logging.basicConfig(
+                level=logging.WARNING,
+                filename="logfile.log",
+                filemode="w",
+                format=LOG_FORMAT,
+                force=True,
             )
-        except subprocess.TimeoutExpired:
-            print("Timeout expired. Subprocess execution was terminated.")
-        except Exception as e:
-            print("Error. Subprocess execution was terminated.", e)
-
-        output = response.stdout.decode()
-        print("Subprocess finished with code: ", response.returncode, flush=True)
-        print(output, flush=True)
-
-        LOG_FORMAT = "%(asctime)s:%(levelname)s ==> %(message)s"
-        logging.basicConfig(
-            level=logging.WARNING,
-            filename="logfile.log",
-            filemode="w",
-            format=LOG_FORMAT,
-            force=True,
-        )
-        logging.warning(output)
+            logging.warning(output)
 
     def log_to_processed(self, blob):
         try:
@@ -504,7 +517,7 @@ class _DecodeRequest:
                                 # Read each message
                                 data = json.loads(str(msg))
 
-                                package = data["Package"]
+                                package = data.get("Package")
                                 print("Message sample: ", data, flush=True)
 
                                 # Install runtime package
@@ -538,9 +551,11 @@ class _DecodeRequest:
                 zipinfos = zipdata.infolist()
                 try:
                     for zipinfo in zipinfos:
-                        if (zipinfo.filename).lower().__contains__(".dat") or (
-                            zipinfo.filename
-                        ).lower().__contains__(".raw"):
+                        if (
+                            (zipinfo.filename).lower().__contains__(".dat")
+                            or (zipinfo.filename).lower().__contains__(".raw")
+                            or (zipinfo.filename).endswith("-CPL")
+                        ):
                             print("Unzipping =>", zipinfo.filename, flush=True)
                             zipdata.extract(zipinfo, qar_dir_in)
                             print("File unzipped", flush=True)
@@ -552,7 +567,6 @@ class _DecodeRequest:
                     print("Error unzipping: ", e, flush=True)
                     zipdata.close()
                     shutil.rmtree(qar_dir_in)  # delete zipped file
-
 
     def clean(self):
         try:
