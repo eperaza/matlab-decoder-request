@@ -53,6 +53,7 @@ class _DecodeRequest:
         self.QAR_Decode = None
         self.my_QAR_Decode = None
         self.run_date = None
+        self.sample = None
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
@@ -159,12 +160,8 @@ class _DecodeRequest:
         except Exception as e:
             print("Error retrieving package: ", e, flush=True)
 
-    def read_sb_queue(self, sample):
-        _airline = sample.get("Airline")
-        _tail = sample.get("Tail")
-        _package = sample.get("Package")
-        _overwrite = sample.get("Overwrite")
-
+    def read_sb_queue(self):
+       
         # Download and decode matching files
         while True:
             with ServiceBusClient.from_connection_string(
@@ -180,44 +177,58 @@ class _DecodeRequest:
                         max_message_count=self.MACHINE_CPUS, max_wait_time=5
                     )
                     if received_msgs:
-                        for msg in received_msgs:
-                            # ServiceBusReceiver instance is a generator.
+                        sample = None
+                        for index, msg in enumerate(received_msgs):
                             try:
-                                # Read each message
-                                data = json.loads(str(msg))
-                                airline = data.get("Airline")
-                                tail = data.get("Tail")
-                                file_path = data.get("FilePath")
-                                package = data.get("Package")
-                                overwrite = data.get("Overwrite")
-                                if (
-                                    airline == _airline
-                                    and tail == _tail
-                                    and package == _package
-                                    and overwrite == _overwrite
-                                ):
-                                    print(
-                                        "Message matches sample",
-                                        flush=True,
-                                    )
-                                    """
-                                    with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
-                                        auto_lock_renewer.register(
-                                            receiver, msg, max_lock_renewal_duration=300
-                                        )
-                                        print(
-                                            "Message received, lock lease extended",
-                                            flush=True,
-                                        )
-                                    """
+                                print("index =>", index, flush=True)
+
+                                if index == 0:
+                                    sample = json.loads(str(msg))
                                     receiver.complete_message(msg)
+
+                                    file_path = sample.get("FilePath")
+                                    package = sample.get("Package")
+
+                                    # Install runtime package
+                                    self.download_package(package)
+                                    # Install ICDs
+                                    self.download_icds()
+
+                                    print("got sample =>", sample, flush=True)
                                     self.download_blob_to_file(file_path)
                                 else:
-                                    print(
-                                        "Message doesn't match sample, breaking loop... ",
-                                        flush=True,
-                                    )
-                                    # continue
+                                    # Read each message
+                                    data = json.loads(str(msg))
+                                    airline = data.get("Airline")
+                                    tail = data.get("Tail")
+                                    file_path = data.get("FilePath")
+                                    package = data.get("Package")
+                                    overwrite = data.get("Overwrite")
+                                    if (
+                                        airline == sample.get("Airline")
+                                        and tail == sample.get("Tail")
+                                        and package == sample.get("Package")
+                                        and overwrite == sample.get("Overwrite")
+                                    ):
+                                        print("Message matches sample", flush=True)
+                                        """
+                                        with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+                                            auto_lock_renewer.register(
+                                                receiver, msg, max_lock_renewal_duration=300
+                                            )
+                                            print(
+                                                "Message received, lock lease extended",
+                                                flush=True,
+                                            )
+                                        """
+                                        receiver.complete_message(msg)
+                                        self.download_blob_to_file(file_path)
+                                    else:
+                                        print(
+                                            "Message doesn't match sample, breaking loop... ",
+                                            flush=True,
+                                        )
+                                        # continue
                             except Exception as e:
                                 print("Error processing message:", e, flush=True)
                                 try:
@@ -230,13 +241,18 @@ class _DecodeRequest:
                                         "Could not dead-letter message, lock expired",
                                         flush=True,
                                     )
+                        count = 0
+                        for path in os.scandir(self.QARDirIn):
+                            if path.is_dir():
+                                count += 1
 
-                        self.unzip(self.QARDirIn)
-                        self.decode(airline, tail)
+                        if count > 1:
+                            self.unzip(self.QARDirIn)
+                            self.decode(airline, tail)
 
-                        # Log output to storage
-                        self.upload_output(airline, tail)
-                        # time.sleep(30)
+                            # Log output to storage
+                            self.upload_output(airline, tail)
+                            # time.sleep(30)
                     else:
                         print("Didn't receive any messages...", flush=True)
                         time.sleep(30)
@@ -247,44 +263,38 @@ class _DecodeRequest:
         # Decode binary
         os.chdir(self.ScriptsDirIn)
 
-        count = 0
-        for path in os.scandir(self.ScriptsDirIn):
-            if path.is_dir():
-                count += 1
-
-        if count > 1:
-            print("Running decode subprocess...", flush=True)
-            try:
-                response = subprocess.run(
-                    [
-                        "python",
-                        "__run__.py",
-                        f"{self.QARDirIn}",
-                        f"{self.OutDirIn}",
-                        f"{airline}",
-                        f"{tail}",
-                    ],
-                    capture_output=True,
-                    timeout=10800,
-                )
-            except subprocess.TimeoutExpired:
-                print("Timeout expired. Subprocess execution was terminated.")
-            except Exception as e:
-                print("Error. Subprocess execution was terminated.", e)
-
-            output = response.stdout.decode()
-            print("Subprocess finished with code: ", response.returncode, flush=True)
-            print(output, flush=True)
-
-            LOG_FORMAT = "%(asctime)s:%(levelname)s ==> %(message)s"
-            logging.basicConfig(
-                level=logging.WARNING,
-                filename="logfile.log",
-                filemode="w",
-                format=LOG_FORMAT,
-                force=True,
+        print("Running decode subprocess...", flush=True)
+        try:
+            response = subprocess.run(
+                [
+                    "python",
+                    "__run__.py",
+                    f"{self.QARDirIn}",
+                    f"{self.OutDirIn}",
+                    f"{airline}",
+                    f"{tail}",
+                ],
+                capture_output=True,
+                timeout=10800,
             )
-            logging.warning(output)
+        except subprocess.TimeoutExpired:
+            print("Timeout expired. Subprocess execution was terminated.")
+        except Exception as e:
+            print("Error. Subprocess execution was terminated.", e)
+
+        output = response.stdout.decode()
+        print("Subprocess finished with code: ", response.returncode, flush=True)
+        print(output, flush=True)
+
+        LOG_FORMAT = "%(asctime)s:%(levelname)s ==> %(message)s"
+        logging.basicConfig(
+            level=logging.WARNING,
+            filename="logfile.log",
+            filemode="w",
+            format=LOG_FORMAT,
+            force=True,
+        )
+        logging.warning(output)
 
     def log_to_processed(self, blob):
         try:
@@ -301,10 +311,10 @@ class _DecodeRequest:
                 table_name="AirlineFlightDataProcessed"
             )
 
-            entity = table_client.create_entity(entity=my_entity)
+            table_client.create_entity(entity=my_entity)
             print(
                 "Inserted into AirlineFlightDataProcessed =>",
-                entity,
+                blob,
                 flush=True,
             )
         except Exception as e:
@@ -327,7 +337,7 @@ class _DecodeRequest:
 
         url = self.winapi_path(dir_in + "/" + file_name)
 
-        print("Downloading =>", file_name, flush=True)
+        print(f'Downloading => {self.airline}: {file_name}', flush=True)
 
         with open(file=url, mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
@@ -484,11 +494,12 @@ class _DecodeRequest:
                 self.create_dirs()
 
                 # Read from service bus qar-decode-request for incoming runtime
-                sample = self.get_master_file()
+                #sample = self.get_master_file()
+                
 
-                if sample:
+                #if sample:
                     # Read from service bus qar-decode queue
-                    self.read_sb_queue(sample)
+                self.read_sb_queue()
 
                 # Get remaining queue msg count
                 count = self.get_queue_msg_count()

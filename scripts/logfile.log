@@ -1,15 +1,2 @@
-2023-12-15 21:36:11,997:WARNING ==> loading fred file
-fred file loaded
-     4
-
-Starting parallel pool (parpool) using the 'local' profile ...
-Connected to the parallel pool (number of workers: 12).
-Decoding Start
-     1
-
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\EYA6-BLA_CPL__20231212020546+0000-[PS-EAWVOWLLPAP001P]
-C:\Users\xc170f\Documents\FDA\vscode\qardecode-request\input\EYA6-BLA_CPL__20231212020546+0000-[PS-EAWVOWLLPAP001P]\231211-065422-ETD69W-OMAA-EGLL-EY-A6-BLA-CPL
-CPL Processed
-Split Data
-Elapsed time is 421.518556 seconds.
+2023-12-16 22:43:10,240:WARNING ==> Error: ICD Mapping FIle Missing
 
