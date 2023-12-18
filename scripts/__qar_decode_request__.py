@@ -57,8 +57,7 @@ class _DecodeRequest:
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
-        self.MACHINE_CPUS = os.cpu_count()
-        self.get_runtime()
+        self.MACHINE_CPUS = 2
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
@@ -70,6 +69,8 @@ class _DecodeRequest:
         )
         self.root = Path.cwd()
         self.create_dirs()
+        self.get_runtime()
+
 
     def create_dirs(self):
         absolute_path = self.root
@@ -115,6 +116,7 @@ class _DecodeRequest:
             runtime = json.loads(blob_text)
             # self.icds = runtime["icds"]
             self.package = runtime["package"]
+            self.download_package(self.package)
             print("Runtime: ", runtime, flush=True)
             return runtime
         except Exception as e:
@@ -161,7 +163,6 @@ class _DecodeRequest:
             print("Error retrieving package: ", e, flush=True)
 
     def read_sb_queue(self):
-       
         # Download and decode matching files
         while True:
             with ServiceBusClient.from_connection_string(
@@ -180,21 +181,23 @@ class _DecodeRequest:
                         sample = None
                         for index, msg in enumerate(received_msgs):
                             try:
-                                print("index =>", index, flush=True)
-
                                 if index == 0:
                                     sample = json.loads(str(msg))
                                     receiver.complete_message(msg)
-
+                                    self.run_date=sample.get("Timestamp")
                                     file_path = sample.get("FilePath")
                                     package = sample.get("Package")
+                                    
+                                    # Check if package has changed
+                                    if self.package is not package:
+                                        # Install runtime package
+                                        self.download_package(package)
+                                        self.package = package
 
-                                    # Install runtime package
-                                    self.download_package(package)
                                     # Install ICDs
                                     self.download_icds()
 
-                                    print("got sample =>", sample, flush=True)
+                                    print("Got sample =>", sample, flush=True)
                                     self.download_blob_to_file(file_path)
                                 else:
                                     # Read each message
@@ -313,7 +316,7 @@ class _DecodeRequest:
 
             table_client.create_entity(entity=my_entity)
             print(
-                "Inserted into AirlineFlightDataProcessed =>",
+                "Persist into AirlineFlightDataProcessed =>",
                 blob,
                 flush=True,
             )
@@ -337,7 +340,7 @@ class _DecodeRequest:
 
         url = self.winapi_path(dir_in + "/" + file_name)
 
-        print(f'Downloading => {self.airline}: {file_name}', flush=True)
+        print(f"Downloading => {path}", flush=True)
 
         with open(file=url, mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
@@ -351,7 +354,7 @@ class _DecodeRequest:
 
     def upload_output(self, airline, tail):
         try:
-            now = datetime.datetime.fromisoformat(self.run_date)
+            now = datetime.datetime.strptime(self.run_date,"%Y-%m-%dT%H:%M:%S.%f")
             date = f"{now.year:02d}" + f"{now.month:02d}"
 
             container_client = self.blob_client.get_container_client(
@@ -412,7 +415,7 @@ class _DecodeRequest:
                                 container_client.upload_blob(
                                     name=date_path, data=data, overwrite=True
                                 )
-                            print("Uploaded to logs: ", item.name, flush=True)
+                            print("Uploaded to logs:", item.name, flush=True)
 
                             # Upload flight record
                             self.upload_flight_record(
@@ -487,18 +490,17 @@ class _DecodeRequest:
             print("Message count: ", count, flush=True)
 
             while count > 0:
-                self.run_date = datetime.datetime.utcnow().isoformat()
+                #self.run_date = datetime.datetime.utcnow().isoformat()
 
                 # clean start
                 self.clean()
                 self.create_dirs()
 
                 # Read from service bus qar-decode-request for incoming runtime
-                #sample = self.get_master_file()
-                
+                # sample = self.get_master_file()
 
-                #if sample:
-                    # Read from service bus qar-decode queue
+                # if sample:
+                # Read from service bus qar-decode queue
                 self.read_sb_queue()
 
                 # Get remaining queue msg count
