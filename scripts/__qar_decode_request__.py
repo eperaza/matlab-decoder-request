@@ -57,7 +57,7 @@ class _DecodeRequest:
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
-        self.MACHINE_CPUS = 2
+        self.MACHINE_CPUS = os.cpu_count()
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
