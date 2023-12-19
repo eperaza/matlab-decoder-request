@@ -20,7 +20,7 @@ import subprocess
 import re
 from pathlib import Path
 
-from azure.storage.blob import BlobServiceClient, ContainerClient
+from azure.storage.blob import BlobServiceClient, BlobClient, BlobBlock, ContainerClient
 from azure.data.tables import TableServiceClient
 from azure.storage.queue import (
     QueueServiceClient,
@@ -54,10 +54,12 @@ class _DecodeRequest:
         self.my_QAR_Decode = None
         self.run_date = None
         self.sample = None
+        self.map_input = []
+        self.map_output = []
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
-        self.MACHINE_CPUS = os.cpu_count()
+        self.MACHINE_CPUS = 1
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
@@ -70,7 +72,6 @@ class _DecodeRequest:
         self.root = Path.cwd()
         self.create_dirs()
         self.get_runtime()
-
 
     def create_dirs(self):
         absolute_path = self.root
@@ -179,15 +180,21 @@ class _DecodeRequest:
                     )
                     if received_msgs:
                         sample = None
+                        print("Messages length:", len(received_msgs), flush=True)
+
                         for index, msg in enumerate(received_msgs):
+                            print("EIndex=>", index, flush=True)
+
                             try:
                                 if index == 0:
                                     sample = json.loads(str(msg))
                                     receiver.complete_message(msg)
-                                    self.run_date=sample.get("Timestamp")
+                                    self.run_date = sample.get("Timestamp")
                                     file_path = sample.get("FilePath")
                                     package = sample.get("Package")
-                                    
+                                    airline = sample.get("Airline")
+                                    tail = sample.get("Tail")
+
                                     # Check if package has changed
                                     if self.package is not package:
                                         # Install runtime package
@@ -354,7 +361,7 @@ class _DecodeRequest:
 
     def upload_output(self, airline, tail):
         try:
-            now = datetime.datetime.strptime(self.run_date,"%Y-%m-%dT%H:%M:%S.%f")
+            now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
             date = f"{now.year:02d}" + f"{now.month:02d}"
 
             container_client = self.blob_client.get_container_client(
@@ -363,7 +370,7 @@ class _DecodeRequest:
             # Log all output files
             dir_in = self.winapi_path(self.QARDirIn)
             for parent in os.scandir(dir_in):  # loop through items in output dir
-                print("Scanning input dir...", flush=True)
+                print("Scanning input dir", parent, flush=True)
                 tails_path_log = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
                 tails_path_run_status = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
                 date_path_log = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{parent.name}/{self.run_date}.log"
@@ -371,35 +378,44 @@ class _DecodeRequest:
 
                 if parent.name != "ICDs":
                     # Upload log file
-                    with open(file=("logfile.log"), mode="rb") as data:
-                        container_client.upload_blob(
-                            name=tails_path_log, data=data, overwrite=True
-                        )
-                    with open(file=("logfile.log"), mode="rb") as data:
-                        container_client.upload_blob(
-                            name=date_path_log, data=data, overwrite=True
-                        )
-                    print("Log uploaded successfully", flush=True)
+                    self.upload_blocks(
+                        self.ANALYTICS_CONTAINER, "logfile.log", tails_path_log
+                    )
+                    self.upload_blocks(
+                        self.ANALYTICS_CONTAINER, "logfile.log", tails_path_run_status
+                    )
 
                     # Upload run status
+                    try:
+                        self.upload_blocks(
+                            self.ANALYTICS_CONTAINER,
+                            f"{self.OutDirIn}/runstatus.json",
+                            date_path_log,
+                        )
+                        self.upload_blocks(
+                            self.ANALYTICS_CONTAINER,
+                            f"{self.OutDirIn}/runstatus.json",
+                            date_path_run_status,
+                        )
+                        os.remove(f"{self.OutDirIn}/runstatus.json")
+
+                    except Exception as e:
+                        print("Run status file does not exist", flush=True)
+                    """
                     try:
                         with open(
                             file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
                         ) as data:
-                            container_client.upload_blob(
-                                name=tails_path_run_status, data=data, overwrite=True
-                            )
-                        with open(
-                            file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
-                        ) as data:
-                            container_client.upload_blob(
-                                name=date_path_run_status, data=data, overwrite=True
-                            )
-                        print("Run status uploaded successfully", flush=True)
-                        os.remove(f"{self.OutDirIn}/runstatus.json")
-                    except Exception as e:
-                        print("Run status file does not exist", flush=True)
+                            data = json.load(data)
+                            self.map_input = self.map_input + data["inputFiles"]
+                            print("IO=>", self.map_input, flush=True)
 
+                        print("Run status uploaded successfully", flush=True)
+                    except Exception as e:
+                        print("Error appending IO mapping", flush=True)
+                    """
+
+                    # Log flight records
                     dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
                     for item in os.scandir(dir_in):
                         if item.name.endswith(".csv"):
@@ -489,8 +505,11 @@ class _DecodeRequest:
 
             print("Message count: ", count, flush=True)
 
+            self.map_input = []
+            self.map_output = []
+
             while count > 0:
-                #self.run_date = datetime.datetime.utcnow().isoformat()
+                # self.run_date = datetime.datetime.utcnow().isoformat()
 
                 # clean start
                 self.clean()
@@ -505,6 +524,8 @@ class _DecodeRequest:
 
                 # Get remaining queue msg count
                 count = self.get_queue_msg_count()
+
+                print("Input map=>", self.map_input, flush=True)
 
         except Exception as e:
             print("Error reading from service bus: ", e, flush=True)
@@ -614,6 +635,29 @@ class _DecodeRequest:
         if path.startswith("\\\\"):
             return "\\\\?\\UNC\\" + path[2:]
         return "\\\\?\\" + path
+
+    def upload_blocks(self, container, source, dest):
+        try:
+            # Upload packaged zip to storage in blocks
+            block_client = BlobClient.from_connection_string(
+                self.STORAGE_CONNECTION_STRING, container, dest
+            )
+            block_list = []
+            chunk_size = 4 * 1024 * 1024
+            with open(source, "rb") as f:
+                while True:
+                    read_data = f.read(chunk_size)
+                    if not read_data:
+                        break  # done
+                    blk_id = str(uuid.uuid4())
+                    print("Staging block =>", blk_id, flush=True)
+                    block_client.stage_block(block_id=blk_id, data=read_data)
+                    block_list.append(BlobBlock(block_id=blk_id))
+
+            block_client.commit_block_list(block_list)
+            print("Block blob uploaded successfully", flush=True)
+        except Exception as e:
+            print("Error uploading block blob:", e, flush=True)
 
 
 if __name__ == "__main__":
