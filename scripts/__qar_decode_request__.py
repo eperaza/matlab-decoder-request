@@ -59,7 +59,7 @@ class _DecodeRequest:
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
-        self.MACHINE_CPUS = os.cpu_count()
+        self.MACHINE_CPUS = 1
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
@@ -165,6 +165,8 @@ class _DecodeRequest:
 
     def read_sb_queue(self):
         # Download and decode matching files
+        airline = None
+        tail = None
         while True:
             with ServiceBusClient.from_connection_string(
                 self.QUEUE_NAMESPACE_CONN
@@ -183,8 +185,7 @@ class _DecodeRequest:
                         print("Messages length:", len(received_msgs), flush=True)
 
                         for index, msg in enumerate(received_msgs):
-                            print("EIndex=>", index, flush=True)
-
+                            # print("Index=>", index, flush=True)
                             try:
                                 if index == 0:
                                     sample = json.loads(str(msg))
@@ -221,16 +222,9 @@ class _DecodeRequest:
                                         and overwrite == sample.get("Overwrite")
                                     ):
                                         print("Message matches sample", flush=True)
-                                        """
-                                        with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
-                                            auto_lock_renewer.register(
-                                                receiver, msg, max_lock_renewal_duration=300
-                                            )
-                                            print(
-                                                "Message received, lock lease extended",
-                                                flush=True,
-                                            )
-                                        """
+
+                                        # self.extend_lock(msg, receiver)
+
                                         receiver.complete_message(msg)
                                         self.download_blob_to_file(file_path)
                                     else:
@@ -262,10 +256,14 @@ class _DecodeRequest:
 
                             # Log output to storage
                             self.upload_output(airline, tail)
+                            self.upload_run_status(airline, tail)
+
                             # time.sleep(30)
                     else:
                         print("Didn't receive any messages...", flush=True)
                         time.sleep(30)
+                        # Upload run status file
+                        #self.upload_run_status(airline, tail)
                         return
         # self.restart_program()
 
@@ -397,23 +395,14 @@ class _DecodeRequest:
                             f"{self.OutDirIn}/runstatus.json",
                             date_path_run_status,
                         )
-                        os.remove(f"{self.OutDirIn}/runstatus.json")
+
+                        # Save run status
+                        self.save_run_status()
+
+                        # os.remove(f"{self.OutDirIn}/runstatus.json")
 
                     except Exception as e:
                         print("Run status file does not exist", flush=True)
-                    """
-                    try:
-                        with open(
-                            file=(f"{self.OutDirIn}/runstatus.json"), mode="rb"
-                        ) as data:
-                            data = json.load(data)
-                            self.map_input = self.map_input + data["inputFiles"]
-                            print("IO=>", self.map_input, flush=True)
-
-                        print("Run status uploaded successfully", flush=True)
-                    except Exception as e:
-                        print("Error appending IO mapping", flush=True)
-                    """
 
                     # Log flight records
                     dir_in = self.winapi_path(f"{self.QARDirIn}/{parent.name}")
@@ -441,6 +430,41 @@ class _DecodeRequest:
                     shutil.rmtree(parent)
         except Exception as e:
             print("Error uploading output files: ", e, flush=True)
+
+    def save_run_status(self):
+        try:
+            with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
+                data = json.load(data)
+                self.map_input = self.map_input + data["inputFiles"]
+                self.map_output = self.map_output + data["outputFiles"]
+
+            self.runstatus_host_path = f"{self.OutDirIn}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            json_dict = {"inputFiles": self.map_input, "outputFiles": self.map_output}
+            #print(json_dict, flush=True)
+
+            with open(
+                file=(self.runstatus_host_path),
+                mode="w",
+            ) as map:
+                # map.write(json_map)
+                json.dump(json_dict, map, indent=4)
+            print("Run status saved successfully", flush=True)
+        except Exception as e:
+            print("Error appending IO mapping:", e, flush=True)
+
+    def upload_run_status(self, airline, tail):
+        try:
+            now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
+            date = f"{now.year:02d}" + f"{now.month:02d}"
+
+            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
+
+            path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
+
+        except Exception as e:
+            print("No run registered, can't update status...", e, flush=True)
 
     def upload_flight_record(self, client, container_name, blob):
         container_client = client.get_container_client(container=container_name)
@@ -515,66 +539,16 @@ class _DecodeRequest:
                 self.clean()
                 self.create_dirs()
 
-                # Read from service bus qar-decode-request for incoming runtime
-                # sample = self.get_master_file()
-
-                # if sample:
                 # Read from service bus qar-decode queue
                 self.read_sb_queue()
+
+                print("Input map=>", self.map_input, flush=True)
 
                 # Get remaining queue msg count
                 count = self.get_queue_msg_count()
 
-                print("Input map=>", self.map_input, flush=True)
-
         except Exception as e:
             print("Error reading from service bus: ", e, flush=True)
-
-    def get_master_file(self):
-        print("Reading qar-decode-request queue...", flush=True)
-        try:
-            with ServiceBusClient.from_connection_string(
-                self.QUEUE_NAMESPACE_CONN
-            ) as client:
-                # max_wait_time specifies how long the receiver should wait with no incoming messages before stopping receipt.
-                # Default is None; to receive forever.
-                # Get message sample
-                with client.get_queue_receiver(
-                    self.QAR_DECODE_REQUEST_QUEUE
-                ) as receiver:
-                    received_msgs = receiver.peek_messages(max_message_count=1)
-                    if received_msgs:
-                        for msg in received_msgs:
-                            # ServiceBusReceiver instance is a generator.
-                            print("Got sample message", flush=True)
-                            try:
-                                # Read each message
-                                data = json.loads(str(msg))
-
-                                package = data.get("Package")
-                                print("Message sample: ", data, flush=True)
-
-                                # Install runtime package
-                                self.download_package(package)
-
-                                # Install ICDs
-                                self.download_icds()
-
-                                # receiver.complete_message(msg)
-                                time.sleep(1)
-                                return data
-
-                            except Exception as e:
-                                receiver.dead_letter_message(
-                                    msg, e, "Error parsing message from sb queue"
-                                )
-                                print(
-                                    "Error parsing message from sb queue: ",
-                                    e,
-                                    flush=True,
-                                )
-        except Exception as e:
-            print("Error reading from sb queue: ", e, flush=True)
 
     def unzip(self, qar_dir_in):
         extension = ".zip"
@@ -637,6 +611,7 @@ class _DecodeRequest:
         return "\\\\?\\" + path
 
     def upload_blocks(self, container, source, dest):
+        print("Uploading", dest, flush=True)
         try:
             # Upload packaged zip to storage in blocks
             block_client = BlobClient.from_connection_string(
@@ -650,7 +625,7 @@ class _DecodeRequest:
                     if not read_data:
                         break  # done
                     blk_id = str(uuid.uuid4())
-                    print("Staging block =>", blk_id, flush=True)
+                    # print("Staging block =>", blk_id, flush=True)
                     block_client.stage_block(block_id=blk_id, data=read_data)
                     block_list.append(BlobBlock(block_id=blk_id))
 
@@ -658,6 +633,14 @@ class _DecodeRequest:
             print("Block blob uploaded successfully", flush=True)
         except Exception as e:
             print("Error uploading block blob:", e, flush=True)
+
+    def extend_lock(self, msg, receiver):
+        with AutoLockRenewer() as auto_lock_renewer:  # extend lock lease
+            auto_lock_renewer.register(receiver, msg, max_lock_renewal_duration=300)
+            print(
+                "Message received, lock lease extended",
+                flush=True,
+            )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+{
+    "inputFiles": [
+        "raw (20).dat",
+        "raw (21).dat",
+        "raw (22).dat"
+    ],
+    "outputFiles": [
+        "231104_053649_----_VGHS_OKBK_KAC_9kaok.csv",
+        "231103_230257_----_OKBK_VGHS_KAC_9kaok.csv",
+        "231103_173151_----_HECA_OKBK_KAC_9kaok.csv"
+    ]
+}
