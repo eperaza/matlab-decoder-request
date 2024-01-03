@@ -397,11 +397,6 @@ class _DecodeRequest:
                             date_path_run_status,
                         )
 
-                        # Save run status
-                        self.save_run_status()
-
-                        # os.remove(f"{self.OutDirIn}/runstatus.json")
-
                     except Exception as e:
                         print("Run status file does not exist", flush=True)
 
@@ -429,6 +424,8 @@ class _DecodeRequest:
                             )
                     # Remove item
                     shutil.rmtree(parent)
+            # Save run status
+            self.save_run_status()
         except Exception as e:
             print("Error uploading output files: ", e, flush=True)
 
@@ -527,7 +524,6 @@ class _DecodeRequest:
         print("Listening...", flush=True)
         try:
             count = self.get_queue_msg_count()
-            print("Hostname:", self.hostname, flush=True)
             print("Message count: ", count, flush=True)
 
             self.map_input = []
