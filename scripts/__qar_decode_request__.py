@@ -368,7 +368,7 @@ class _DecodeRequest:
             )
             # Log all output files
             dir_in = self.winapi_path(self.QARDirIn)
-            for parent in os.scandir(dir_in):  # loop through items in output dir
+            for parent in os.scandir(dir_in):  # loop through items in input dir
                 print("Scanning input dir", parent, flush=True)
                 tails_path_log = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/{self.run_date}.log"
                 tails_path_run_status = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{parent.name}/runstatus.json"
