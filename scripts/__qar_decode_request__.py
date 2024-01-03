@@ -381,7 +381,7 @@ class _DecodeRequest:
                         self.ANALYTICS_CONTAINER, "logfile.log", tails_path_log
                     )
                     self.upload_blocks(
-                        self.ANALYTICS_CONTAINER, "logfile.log", tails_path_run_status
+                        self.ANALYTICS_CONTAINER, "logfile.log", date_path_log
                     )
 
                     # Upload run status
@@ -389,7 +389,7 @@ class _DecodeRequest:
                         self.upload_blocks(
                             self.ANALYTICS_CONTAINER,
                             f"{self.OutDirIn}/runstatus.json",
-                            date_path_log,
+                            tails_path_run_status,
                         )
                         self.upload_blocks(
                             self.ANALYTICS_CONTAINER,
