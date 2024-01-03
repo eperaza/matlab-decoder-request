@@ -59,7 +59,8 @@ class _DecodeRequest:
         self.FLIGHT_RECORDS_CONTAINER = os.getenv("FLIGHT_RECORDS_CONTAINER")
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
-        self.MACHINE_CPUS = 1
+        self.hostname = os.getpid()
+        self.MACHINE_CPUS = os.cpu_count()
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
@@ -438,7 +439,7 @@ class _DecodeRequest:
                 self.map_input = self.map_input + data["inputFiles"]
                 self.map_output = self.map_output + data["outputFiles"]
 
-            self.runstatus_host_path = f"{self.OutDirIn}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            self.runstatus_host_path = f"{self.OutDirIn}/{self.hostname}_runstatus.json"
             json_dict = {"inputFiles": self.map_input, "outputFiles": self.map_output}
             #print(json_dict, flush=True)
 
@@ -457,10 +458,10 @@ class _DecodeRequest:
             now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
             date = f"{now.year:02d}" + f"{now.month:02d}"
 
-            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{self.hostname}_runstatus.json"
             self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
 
-            path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{os.getenv('COMPUTERNAME', 'defaultValue')}_runstatus.json"
+            path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{self.hostname}_runstatus.json"
             self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
 
         except Exception as e:
@@ -526,7 +527,7 @@ class _DecodeRequest:
         print("Listening...", flush=True)
         try:
             count = self.get_queue_msg_count()
-
+            print("Hostname:", self.hostname, flush=True)
             print("Message count: ", count, flush=True)
 
             self.map_input = []
