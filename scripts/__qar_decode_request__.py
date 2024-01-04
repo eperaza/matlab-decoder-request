@@ -433,8 +433,8 @@ class _DecodeRequest:
         try:
             with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
                 data = json.load(data)
-                self.map_input = self.map_input + data["inputFiles"]
-                self.map_output = self.map_output + data["outputFiles"]
+                self.map_input =  data["inputFiles"]
+                self.map_output = data["outputFiles"]
 
             self.runstatus_host_path = f"{self.OutDirIn}/{self.hostname}_runstatus.json"
 
