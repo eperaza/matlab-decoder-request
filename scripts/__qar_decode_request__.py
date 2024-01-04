@@ -60,7 +60,7 @@ class _DecodeRequest:
         self.blob_client = self.auth_blob_client()
         self.table_client = self.auth_table_client()
         self.hostname = os.getpid()
-        self.MACHINE_CPUS = os.cpu_count()
+        self.MACHINE_CPUS = 4
         # Service Bus queue variables
         self.QUEUE_NAMESPACE_CONN = os.getenv("QUEUE_NAMESPACE_CONN")
         self.QAR_DECODE_REQUEST_QUEUE = os.getenv("QAR_DECODE_REQUEST_QUEUE")
@@ -183,7 +183,7 @@ class _DecodeRequest:
                     )
                     if received_msgs:
                         sample = None
-                        print("Messages length:", len(received_msgs), flush=True)
+                        print("Messages received:", len(received_msgs), flush=True)
 
                         for index, msg in enumerate(received_msgs):
                             # print("Index=>", index, flush=True)
@@ -264,7 +264,7 @@ class _DecodeRequest:
                         print("Didn't receive any messages...", flush=True)
                         time.sleep(30)
                         # Upload run status file
-                        #self.upload_run_status(airline, tail)
+                        # self.upload_run_status(airline, tail)
                         return
         # self.restart_program()
 
@@ -437,8 +437,36 @@ class _DecodeRequest:
                 self.map_output = self.map_output + data["outputFiles"]
 
             self.runstatus_host_path = f"{self.OutDirIn}/{self.hostname}_runstatus.json"
-            json_dict = {"inputFiles": self.map_input, "outputFiles": self.map_output}
-            #print(json_dict, flush=True)
+
+        except Exception as e:
+            print("Error appending IO mapping:", e, flush=True)
+
+    def upload_run_status(self, airline, tail):
+        now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
+        date = f"{now.year:02d}" + f"{now.month:02d}"
+        input_files = []
+        output_files = []
+
+        try:
+            blob_client = self.blob_client.get_blob_client(
+                container=self.ANALYTICS_CONTAINER,
+                blob=f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/runstatus.json",
+            )
+
+            downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
+            blob_text = downloader.readall()
+            data = json.loads(blob_text)
+            input_files = data["inputFiles"]
+            output_files = data["outputFiles"]
+        except Exception as e:
+            print("Error retrieving run status...", e, flush=True)
+
+        try:
+            input_files = input_files + self.map_input
+            output_files = output_files + self.map_output
+
+            json_dict = {"inputFiles": input_files, "outputFiles": output_files}
+            # print(json_dict, flush=True)
 
             with open(
                 file=(self.runstatus_host_path),
@@ -446,23 +474,15 @@ class _DecodeRequest:
             ) as map:
                 # map.write(json_map)
                 json.dump(json_dict, map, indent=4)
-            print("Run status saved successfully", flush=True)
+            print("New run status saved successfully", flush=True)
         except Exception as e:
-            print("Error appending IO mapping:", e, flush=True)
+            print("Error saving run status...", e, flush=True)
 
-    def upload_run_status(self, airline, tail):
-        try:
-            now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
-            date = f"{now.year:02d}" + f"{now.month:02d}"
+        path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/runstatus.json"
+        self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
 
-            path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/{self.hostname}_runstatus.json"
-            self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
-
-            path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/{self.hostname}_runstatus.json"
-            self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
-
-        except Exception as e:
-            print("No run registered, can't update status...", e, flush=True)
+        path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/runstatus.json"
+        self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
 
     def upload_flight_record(self, client, container_name, blob):
         container_client = client.get_container_client(container=container_name)
