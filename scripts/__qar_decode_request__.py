@@ -257,8 +257,8 @@ class _DecodeRequest:
 
                             # Log output to storage
                             self.upload_output(airline, tail)
-                            self.upload_run_status(airline, tail)
-
+                            # Persist IO mapping
+                            self.save_run_status(airline, tail)
                             # time.sleep(30)
                     else:
                         print("Didn't receive any messages...", flush=True)
@@ -424,65 +424,45 @@ class _DecodeRequest:
                             )
                     # Remove item
                     shutil.rmtree(parent)
-            # Save run status
-            self.save_run_status()
+
         except Exception as e:
             print("Error uploading output files: ", e, flush=True)
 
-    def save_run_status(self):
+    def save_run_status(self, airline, tail):
         try:
             with open(file=(f"{self.OutDirIn}/runstatus.json"), mode="rb") as data:
                 data = json.load(data)
-                self.map_input =  data["inputFiles"]
+                self.map_input = data["inputFiles"]
                 self.map_output = data["outputFiles"]
 
-            self.runstatus_host_path = f"{self.OutDirIn}/{self.hostname}_runstatus.json"
+            for index, item in enumerate(self.map_input):
+                INPUT_FILE = item
+                OUTPUT_FILE = self.map_output[index]
+                PARTITION_KEY = "1"
 
+                my_entity = {
+                    "PartitionKey": PARTITION_KEY,
+                    "RowKey": f"{uuid.uuid4()}",
+                    "Airline": airline,
+                    "Tail": tail,
+                    "InputFile": INPUT_FILE,
+                    "OutputFile": OUTPUT_FILE
+                }
+
+                table_client = self.table_client.create_table_if_not_exists(
+                    table_name="IOMapping"
+                )
+
+                table_client.create_entity(entity=my_entity)
+                print(
+                    "Persist to IOMapping:",
+                    INPUT_FILE,
+                    "=>",
+                    OUTPUT_FILE,
+                    flush=True,
+                )
         except Exception as e:
-            print("Error appending IO mapping:", e, flush=True)
-
-    def upload_run_status(self, airline, tail):
-        now = datetime.datetime.strptime(self.run_date, "%Y-%m-%dT%H:%M:%S.%f")
-        date = f"{now.year:02d}" + f"{now.month:02d}"
-        input_files = []
-        output_files = []
-
-        try:
-            blob_client = self.blob_client.get_blob_client(
-                container=self.ANALYTICS_CONTAINER,
-                blob=f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/runstatus.json",
-            )
-
-            downloader = blob_client.download_blob(max_concurrency=1, encoding="UTF-8")
-            blob_text = downloader.readall()
-            data = json.loads(blob_text)
-            input_files = data["inputFiles"]
-            output_files = data["outputFiles"]
-        except Exception as e:
-            print("Error retrieving run status...", e, flush=True)
-
-        try:
-            input_files = input_files + self.map_input
-            output_files = output_files + self.map_output
-
-            json_dict = {"inputFiles": input_files, "outputFiles": output_files}
-            # print(json_dict, flush=True)
-
-            with open(
-                file=(self.runstatus_host_path),
-                mode="w",
-            ) as map:
-                # map.write(json_map)
-                json.dump(json_dict, map, indent=4)
-            print("New run status saved successfully", flush=True)
-        except Exception as e:
-            print("Error saving run status...", e, flush=True)
-
-        path = f"logs/qar-decode-request/{airline}/tails/{tail}/{date}/{self.run_date}/runstatus.json"
-        self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
-
-        path = f"logs/qar-decode-request/{airline}/run-date/{self.run_date}/{tail}/runstatus.json"
-        self.upload_blocks(self.ANALYTICS_CONTAINER, self.runstatus_host_path, path)
+            print("Error inserting into IOMapping =>", e, flush=True)
 
     def upload_flight_record(self, client, container_name, blob):
         container_client = client.get_container_client(container=container_name)
