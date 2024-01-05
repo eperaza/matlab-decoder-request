@@ -446,7 +446,8 @@ class _DecodeRequest:
                     "Airline": airline,
                     "Tail": tail,
                     "InputFile": INPUT_FILE,
-                    "OutputFile": OUTPUT_FILE
+                    "OutputFile": OUTPUT_FILE,
+                    "RunDate": self.run_date,
                 }
 
                 table_client = self.table_client.create_table_if_not_exists(
