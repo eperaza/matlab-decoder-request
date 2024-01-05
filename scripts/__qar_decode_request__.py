@@ -445,9 +445,9 @@ class _DecodeRequest:
                     "RowKey": f"{uuid.uuid4()}",
                     "Airline": airline,
                     "Tail": tail,
-                    "InputFile": INPUT_FILE,
-                    "OutputFile": OUTPUT_FILE,
                     "RunDate": self.run_date,
+                    "InputFile": INPUT_FILE,
+                    "OutputFile": OUTPUT_FILE
                 }
 
                 table_client = self.table_client.create_table_if_not_exists(
