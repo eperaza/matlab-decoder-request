@@ -446,12 +446,11 @@ class _DecodeRequest:
                     "Airline": airline,
                     "Tail": tail,
                     "RunDate": self.run_date,
-                    "InputFile": INPUT_FILE,
-                    "OutputFile": OUTPUT_FILE,
+                    "InputFile": INPUT_FILE
                 }
 
                 table_client = self.table_client.create_table_if_not_exists(
-                    table_name="IOMapping"
+                    table_name="FlightRecordMapping"
                 )
 
                 table_client.upsert_entity(mode=UpdateMode.REPLACE, entity=my_entity)
