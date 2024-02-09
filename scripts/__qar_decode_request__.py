@@ -21,7 +21,7 @@ import re
 from pathlib import Path
 
 from azure.storage.blob import BlobServiceClient, BlobClient, BlobBlock, ContainerClient
-from azure.data.tables import TableServiceClient
+from azure.data.tables import TableServiceClient, UpdateMode
 from azure.storage.queue import (
     QueueServiceClient,
     QueueClient,
@@ -442,19 +442,19 @@ class _DecodeRequest:
 
                 my_entity = {
                     "PartitionKey": PARTITION_KEY,
-                    "RowKey": f"{uuid.uuid4()}",
+                    "RowKey": OUTPUT_FILE,
                     "Airline": airline,
                     "Tail": tail,
                     "RunDate": self.run_date,
                     "InputFile": INPUT_FILE,
-                    "OutputFile": OUTPUT_FILE
+                    "OutputFile": OUTPUT_FILE,
                 }
 
                 table_client = self.table_client.create_table_if_not_exists(
                     table_name="IOMapping"
                 )
 
-                table_client.create_entity(entity=my_entity)
+                table_client.upsert_entity(mode=UpdateMode.REPLACE, entity=my_entity)
                 print(
                     "Persist to IOMapping:",
                     INPUT_FILE,
